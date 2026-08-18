@@ -1,229 +1,126 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() => runApp(const MyApp());
+
+class Fruit {
+  final String name;
+  final Color color;
+  final IconData icon;
+
+  const Fruit({required this.name, required this.color, required this.icon});
 }
+
+const List<Fruit> fruits = [
+  Fruit(name: 'apple', color: Colors.red, icon: Icons.apple),
+  Fruit(name: 'banana', color: Colors.yellow, icon: Icons.emoji_food_beverage),
+  Fruit(name: 'grape', color: Colors.purple, icon: Icons.grain),
+  Fruit(name: 'orange', color: Colors.orange, icon: Icons.circle),
+  Fruit(name: 'cherry', color: Colors.pink, icon: Icons.favorite),
+];
+
+Fruit fruitByName(String name) =>
+    fruits.firstWhere((f) => f.name == name, orElse: () => fruits.first);
+
+
+final GoRouter _router = GoRouter(
+  initialLocation: '/',
+  routes: [
+    GoRoute(
+      path: '/',
+      name: 'fruitList',
+      builder: (context, state) => const FruitListPage(),
+      routes: [
+        GoRoute(
+          path: 'fruit/:name',
+          name: 'fruitDetail',
+          builder: (context, state) {
+            final name = state.pathParameters['name']!;
+            return FruitDetailPage(fruit: fruitByName(name));
+          },
+        ),
+      ],
+    ),
+  ],
+);
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Instagram Layout',
-      theme: ThemeData(fontFamily: 'Roboto'),
-      home: const InstagramScreen(),
+    return MaterialApp.router(
+      title: 'go_router Fruit Demo',
+      routerConfig: _router,
+      theme: ThemeData(colorSchemeSeed: Colors.green, useMaterial3: true),
     );
   }
 }
 
-class InstagramScreen extends StatelessWidget {
-  const InstagramScreen({super.key});
+
+class FruitListPage extends StatelessWidget {
+  const FruitListPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
+      appBar: AppBar(title: const Text('Fruits')),
+      body: ListView.builder(
+        itemCount: fruits.length,
+        itemBuilder: (context, index) {
+          final fruit = fruits[index];
+          return ListTile(
+            leading: CircleAvatar(
+              backgroundColor: fruit.color.withValues(alpha: 0.2),
+              child: Icon(fruit.icon, color: fruit.color),
+            ),
+            title: Text(fruit.name[0].toUpperCase() + fruit.name.substring(1)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              // Navigate using the named route so the URL becomes "/fruit/<name>".
+              context.goNamed('fruitDetail', pathParameters: {'name': fruit.name});
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+
+class FruitDetailPage extends StatelessWidget {
+  final Fruit fruit;
+  const FruitDetailPage({super.key, required this.fruit});
+
+  @override
+  Widget build(BuildContext context) {
+    final label = fruit.name[0].toUpperCase() + fruit.name.substring(1);
+
+    return Scaffold(
+      appBar: AppBar(title: Text(label)),
+      body: Center(
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // ---------- Top App Bar ----------
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Instagram',
-                    style: TextStyle(
-                      fontFamily: 'Billabong',
-                      fontSize: 28,
-                      fontWeight: FontWeight.w600,
-                      fontStyle: FontStyle.italic,
-                      color: Colors.black,
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      const Icon(Icons.favorite_border, size: 26),
-                      const SizedBox(width: 18),
-                      Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          const Icon(Icons.send_outlined, size: 24),
-                          Positioned(
-                            right: -4,
-                            top: -4,
-                            child: Container(
-                              padding: const EdgeInsets.all(3),
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
-                              ),
-                              constraints: const BoxConstraints(
-                                minWidth: 16,
-                                minHeight: 16,
-                              ),
-                              child: const Text(
-                                '2',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1, thickness: 0.5),
-
-            // ---------- Post Header ----------
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        colors: [Colors.orange, Colors.pink, Colors.purple],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    padding: const EdgeInsets.all(2),
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white,
-                      ),
-                      padding: const EdgeInsets.all(2),
-                      child: const CircleAvatar(
-                        backgroundColor: Colors.grey,
-                        radius: 14,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'Corpuz',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const Spacer(),
-                  const Icon(Icons.more_vert, size: 20),
-                ],
-              ),
-            ),
-
-            // ---------- Post Image (gradient placeholder) ----------
+            // "Illustration" — a big colored icon standing in for artwork.
             Container(
-              width: double.infinity,
-              height: 320,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xFFF9A825),
-                    Color(0xFFE91E8C),
-                    Color(0xFF6A5ACD),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+              width: 180,
+              height: 180,
+              decoration: BoxDecoration(
+                color: fruit.color.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
               ),
+              child: Icon(fruit.icon, size: 96, color: fruit.color),
             ),
-
-            // ---------- Action Icons ----------
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-              child: Row(
-                children: [
-                  const Icon(Icons.favorite, color: Colors.red, size: 26),
-                  const SizedBox(width: 16),
-                  const Icon(Icons.chat_bubble_outline, size: 24),
-                  const SizedBox(width: 16),
-                  Transform.rotate(
-                    angle: -0.5,
-                    child: const Icon(Icons.send_outlined, size: 22),
-                  ),
-                  const Spacer(),
-                  const Icon(Icons.bookmark_border, size: 24),
-                ],
-              ),
-            ),
-
-            // ---------- Likes ----------
-            const Padding(
-              padding: EdgeInsets.fromLTRB(12, 8, 12, 2),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '10547 Likes',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                ),
-              ),
-            ),
-
-            // ---------- Caption ----------
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-              child: RichText(
-                text: const TextSpan(
-                  style: TextStyle(fontSize: 13, color: Colors.black),
-                  children: [
-                    TextSpan(
-                      text: '@Corpuz  ',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    TextSpan(text: 'Lorem ipsum dolor sit amet, consectetur'),
-                  ],
-                ),
-              ),
-            ),
-
-            // ---------- Hashtags ----------
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '#lorem  #ipsum  #dolor  #sit  #amet  #consectetur',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.blue.shade700,
-                  ),
-                ),
-              ),
-            ),
-
-            const Spacer(),
-            const Divider(height: 1, thickness: 0.5),
-
-            // ---------- Bottom Navigation Bar ----------
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: const [
-                  Icon(Icons.home, size: 26),
-                  Icon(Icons.search, size: 26),
-                  Icon(Icons.add_box_outlined, size: 26),
-                  Icon(Icons.smart_display_outlined, size: 26),
-                  Icon(Icons.person_outline, size: 26),
-                ],
-              ),
+            const SizedBox(height: 24),
+            Text(label, style: Theme.of(context).textTheme.headlineMedium),
+            const SizedBox(height: 8),
+            const Text('This page lives at /fruit/:name'),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.arrow_back),
+              label: const Text('Back to fruit list'),
             ),
           ],
         ),
