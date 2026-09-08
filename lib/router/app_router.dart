@@ -1,17 +1,23 @@
 import 'package:go_router/go_router.dart';
+
 import '../data/product_data.dart';
+import '../screens/cart_screen.dart';
+import '../screens/checkout_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/product_detail_screen.dart';
+import '../state/cart_controller.dart';
 
-/// Navigation 2.0 route table for the app, built with go_router.
-///
-/// Only two routes exist at this checkpoint:
-///   '/'            -> the home grid
-///   '/product/:id' -> the (currently empty) detail page
-/// Cart and checkout routes aren't defined yet — they aren't part of
-/// this milestone and will be added for the full submission.
+/// Navigation 2.0 route table for the complete shop flow.
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
+  refreshListenable: cartController,
+  redirect: (context, state) {
+    // Checkout is protected so it can only be reached with at least one item.
+    if (state.uri.path == '/checkout' && cartController.isEmpty) {
+      return '/cart';
+    }
+    return null;
+  },
   routes: [
     GoRoute(
       path: '/',
@@ -21,11 +27,19 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/product/:id',
       name: 'productDetail',
-      builder: (context, state) {
-        final id = state.pathParameters['id']!;
-        final product = products.firstWhere((p) => p.id == id);
-        return ProductDetailScreen(product: product);
-      },
+      builder: (context, state) => ProductDetailScreen(
+        product: productById(state.pathParameters['id']!),
+      ),
+    ),
+    GoRoute(
+      path: '/cart',
+      name: 'cart',
+      builder: (context, state) => const CartScreen(),
+    ),
+    GoRoute(
+      path: '/checkout',
+      name: 'checkout',
+      builder: (context, state) => const CheckoutScreen(),
     ),
   ],
 );
