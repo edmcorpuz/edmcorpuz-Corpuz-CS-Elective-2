@@ -1,5 +1,5 @@
 name: unang_flutter_project
-description: "A Pokédex for the CS Elective 2 async activity."
+description: "A Provider-managed Pokédex for the CS Elective 2 state management activity."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -35,6 +35,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   http: ^1.6.0
+  provider: ^6.1.5+1
 
 dev_dependencies:
   flutter_test:
