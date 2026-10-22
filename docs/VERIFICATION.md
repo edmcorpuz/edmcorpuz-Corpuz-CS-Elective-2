@@ -14,16 +14,16 @@
 | --- | --- |
 | Dart formatting | `dart format` applied; final format check clean |
 | Static analysis | `flutter analyze`: no issues |
-| Automated tests | `flutter test`: **44 passed** |
+| Automated tests | `flutter test`: **48 passed** |
 | Release web compilation | `flutter build web`: succeeded |
 | Live API integration | `dart run tool/verify_live_api.dart`: 30 real Pokémon, all with type data |
-| Production browser run | Built release opened in headless Chrome against real PokéAPI; displayed `30 of 30 Pokémon` |
+| Production browser run | Live release displayed 30 Pokémon; Grass + Poison returned 3; Grass + Fire returned 0; individual deselection and clearing all passed |
 | Visual review | Desktop 1280×1000 and phone 390×844 screenshots captured and inspected |
 
 The live dataset returned Bulbasaur through Nidorina and nine available types:
 Bug, Electric, Fire, Flying, Grass, Ground, Normal, Poison, Water.
 
-Screenshots: [desktop](images/desktop.png), [phone](images/mobile.png).
+Screenshots: [desktop](images/desktop.png), [phone](images/mobile.png), [Grass + Poison](images/type-combination.png).
 These show real API records/artwork, not a mock UI.
 
 ## Automated coverage
@@ -43,7 +43,9 @@ These show real API records/artwork, not a mock UI.
 - One in-flight Future shared by concurrent refresh calls; later refresh fetches again.
 - Add/remove favorite, unknown ID guard, panel toggle.
 - Add/edit/trim/remove nickname, blank/length validation, original name retained.
-- Actual primary/secondary type filtering and clearing.
+- Multi-select AND filtering: Grass + Poison excludes Grass-only/Poison-only records.
+- Individual chip deselection, clearing all, empty/three-type combinations, and immutable selected-type sets.
+- Selected types survive refresh; a type dropped by a refreshed API response can still be removed.
 - Favorites independent of active filter.
 - Personalizations and panel/filter state preserved through successful refresh.
 - Edits performed during a pending fetch preserved at completion.
@@ -59,7 +61,8 @@ These show real API records/artwork, not a mock UI.
 - Loading/error/retry/empty screens and broken-image fallback.
 - Real reactive heart state, favorites count, panel expansion/collapse.
 - Nickname add/edit/cancel/remove and validation across card/detail/favorites views.
-- Type filter, secondary-type match, clear action, independent favorites panel.
+- Multiple FilterChips selected simultaneously, AND result counts, individual deselection, clear action, and independent favorites panel.
+- Selected combinations, nicknames, and favorites survive an in-app refresh.
 - Both refresh controls call the existing fetch method and retain personalizations.
 - Failed-refresh banner and still-usable previous data.
 - Empty filter recovery.
@@ -92,8 +95,8 @@ and mock HTTP; they do not depend on network availability.
 - No Windows C++ toolchain is installed, so a Windows-native executable was not built.
 - iOS/macOS builds require an appropriate macOS toolchain and were not run here.
 - Automated interaction coverage is in Flutter widget tests. The live Chrome
-  smoke check verifies release rendering/data loading and screenshots, not a
-  separate end-to-end run of every gesture.
+  smoke check verifies release rendering/data loading, multi-select filter interactions,
+  and screenshots, not a separate end-to-end run of every gesture.
 - Nicknames/favorites are in-memory Riverpod state, not restart-persistent storage.
 - Preserving previously loaded data on a refresh failure is not persistent offline caching.
 - A successful build/tests do not guarantee a grade; the student must understand

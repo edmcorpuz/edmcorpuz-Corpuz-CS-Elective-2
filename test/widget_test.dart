@@ -179,12 +179,89 @@ void main() {
       expect(card(1), findsNothing);
       expect(find.byKey(const ValueKey('favorite-entry-7')), findsOneWidget);
       await tap(tester, find.byKey(const ValueKey('type-poison')));
+      expect(find.text('No Pokémon match this combination'), findsOneWidget);
+      expect(find.byKey(const ValueKey('favorite-entry-7')), findsOneWidget);
+      await tap(tester, find.byKey(const ValueKey('type-fire')));
       expect(card(1), findsOneWidget);
       expect(card(4), findsNothing);
       await tap(tester, find.byKey(const ValueKey('type-all')));
       expect(find.byType(PokemonCard), findsNWidgets(4));
     },
   );
+
+  testWidgets('multiple FilterChips use AND matching and can be deselected', (
+    tester,
+  ) async {
+    final container = await mount(
+      tester,
+      FakePokemonService(
+        loader: () async => [
+          ...samplePokemon,
+          Pokemon(
+            id: 152,
+            name: 'chikorita',
+            imageUrl: 'https://example.test/152.png',
+            types: ['grass'],
+          ),
+          Pokemon(
+            id: 23,
+            name: 'ekans',
+            imageUrl: 'https://example.test/23.png',
+            types: ['poison'],
+          ),
+        ],
+      ),
+    );
+    final controller = container.read(pokedexProvider.notifier);
+    controller.saveNickname(1, 'Sprout');
+    controller.toggleFavorite(7);
+    await tap(tester, find.byKey(const ValueKey('toggle-favorites')));
+    await tap(tester, find.byKey(const ValueKey('type-grass')));
+    expect(container.read(pokedexProvider).filteredPokemon.map((p) => p.id), [
+      1,
+      152,
+    ]);
+    await tap(tester, find.byKey(const ValueKey('type-poison')));
+    expect(find.text('1 of 6 Pokémon · Grass + Poison'), findsOneWidget);
+    expect(card(1), findsOneWidget);
+    expect(card(152), findsNothing);
+    expect(card(23), findsNothing);
+    expect(find.text('Sprout'), findsOneWidget);
+    expect(find.byKey(const ValueKey('favorite-entry-7')), findsOneWidget);
+    expect(
+      tester
+          .widget<FilterChip>(find.byKey(const ValueKey('type-grass')))
+          .selected,
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<FilterChip>(find.byKey(const ValueKey('type-poison')))
+          .selected,
+      isTrue,
+    );
+    await tap(tester, find.byKey(const ValueKey('refresh-pokemon')));
+    expect(container.read(pokedexProvider).selectedTypes, {'grass', 'poison'});
+    await tap(tester, find.byKey(const ValueKey('type-grass')));
+    expect(container.read(pokedexProvider).filteredPokemon.map((p) => p.id), [
+      1,
+      23,
+    ]);
+    await tap(tester, find.byKey(const ValueKey('type-poison')));
+    expect(
+      tester
+          .widget<FilterChip>(find.byKey(const ValueKey('type-all')))
+          .selected,
+      isTrue,
+    );
+    expect(container.read(pokedexProvider).filteredPokemon.length, 6);
+    await tap(tester, find.byKey(const ValueKey('type-grass')));
+    await tap(tester, find.byKey(const ValueKey('type-fire')));
+    expect(find.text('No Pokémon match this combination'), findsOneWidget);
+    await tap(tester, find.text('Clear type filters'));
+    expect(container.read(pokedexProvider).selectedTypes, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'toolbar and pull-to-refresh recall fetch and preserve user state',
@@ -225,12 +302,12 @@ void main() {
   ) async {
     final service = FakePokemonService();
     final container = await mount(tester, service);
-    container.read(pokedexProvider.notifier).selectType('fire');
+    container.read(pokedexProvider.notifier).toggleType('fire');
     service.loader = () async => [samplePokemon.first];
     await container.read(pokedexProvider.notifier).fetchPokemon();
     await tester.pumpAndSettle();
-    expect(find.text('No Pokémon match this type'), findsOneWidget);
-    await tap(tester, find.text('Clear type filter'));
+    expect(find.text('No Pokémon match this combination'), findsOneWidget);
+    await tap(tester, find.text('Clear type filters'));
     expect(find.text('Bulbasaur'), findsOneWidget);
   });
 

@@ -19,7 +19,7 @@ The original requirements are preserved in [docs/ASSIGNMENT.md](docs/ASSIGNMENT.
 
 ![Desktop Pokédex with live data](docs/images/desktop.png)
 
-[Phone layout](docs/images/mobile.png)
+[Phone layout](docs/images/mobile.png) · [Grass + Poison filter](docs/images/type-combination.png)
 
 ## The five required features
 
@@ -29,7 +29,7 @@ The original requirements are preserved in [docs/ASSIGNMENT.md](docs/ASSIGNMENT.
 | Nickname editor | Add, edit, validate, cancel, or remove a nickname through a dialog. Nicknames are stored by Pokémon ID in Riverpod and update the card, detail page, and favorites panel immediately. Original names remain visible. |
 | Favorites panel | One expandable/collapsible panel is available in the app bar on **both home and detail pages**. It has an empty state and lets users open or remove favorites. Expansion state survives route navigation. |
 | Heart indicator | Every Pokémon card has a real favorite toggle. Filled/outlined hearts, the panel, and its count all react to the same ID set. Details have the same toggle. |
-| Type filter | Chips are derived from actual `types` returned by PokéAPI. Dual-type Pokémon match either type. **All types** clears the filter. Filtering does not change the favorites panel or delete nicknames. |
+| Type filter | Multi-select chips use actual `types` from PokéAPI. Pokémon must have **every selected type (AND)**: Grass + Poison excludes Grass-only and Poison-only Pokémon. Tap a selected chip to deselect it; **All types** clears every selection. Filtering does not change the favorites panel or delete nicknames. |
 
 Extras include real height/weight/base stats on the detail page, accessible button
 labels, image-loading/error fallbacks, and responsive layouts with large-text
@@ -92,7 +92,7 @@ ProviderScope
   └── pokedexProvider: NotifierProvider<PokedexController, PokedexState>
         ├── Pokémon list + load status + readable error
         ├── favorite IDs + nickname map
-        └── selected type + favorites-panel expansion
+        └── selected type set (AND matching) + favorites-panel expansion
 
 UI event → ref.read(pokedexProvider.notifier).method()
               → immutable replacement of state
@@ -172,7 +172,7 @@ Use `mise exec -- cmd /c ...` for these commands on Windows if needed. The unit 
 widget tests use injected service/mock HTTP data and do not require a working
 PokéAPI connection. The final command intentionally calls the real API.
 
-**Verified:** 44 automated tests passed; static analysis clean; production web
+**Verified:** 48 automated tests passed; static analysis clean; production web
 build succeeded; live API returned all 30 Pokémon with real types; the release
 ran in Chrome at desktop and phone sizes. See [verification details](docs/VERIFICATION.md).
 

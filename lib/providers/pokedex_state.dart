@@ -9,18 +9,19 @@ class PokedexState {
     Set<int> favoriteIds = const {},
     Map<int, String> nicknames = const {},
     this.status = LoadStatus.initial,
-    this.selectedType,
+    Set<String> selectedTypes = const {},
     this.errorMessage,
     this.favoritesExpanded = false,
   }) : pokemon = List.unmodifiable(pokemon),
        favoriteIds = Set.unmodifiable(favoriteIds),
+       selectedTypes = Set.unmodifiable(selectedTypes),
        nicknames = Map.unmodifiable(nicknames);
 
   final List<Pokemon> pokemon;
   final Set<int> favoriteIds;
   final Map<int, String> nicknames;
   final LoadStatus status;
-  final String? selectedType;
+  final Set<String> selectedTypes;
   final String? errorMessage;
   final bool favoritesExpanded;
 
@@ -29,7 +30,8 @@ class PokedexState {
       (pokemon.expand((item) => item.types).toSet().toList()..sort());
   List<Pokemon> get filteredPokemon => List.unmodifiable(
     pokemon.where(
-      (item) => selectedType == null || item.types.contains(selectedType),
+      // AND matching: Grass + Poison requires BOTH types. Empty means all.
+      (item) => selectedTypes.every(item.types.contains),
     ),
   );
   // Favorites deliberately ignore the home-page type filter.
@@ -47,8 +49,7 @@ class PokedexState {
     Set<int>? favoriteIds,
     Map<int, String>? nicknames,
     LoadStatus? status,
-    String? selectedType,
-    bool clearType = false,
+    Set<String>? selectedTypes,
     String? errorMessage,
     bool clearError = false,
     bool? favoritesExpanded,
@@ -57,7 +58,7 @@ class PokedexState {
     favoriteIds: favoriteIds ?? this.favoriteIds,
     nicknames: nicknames ?? this.nicknames,
     status: status ?? this.status,
-    selectedType: clearType ? null : selectedType ?? this.selectedType,
+    selectedTypes: selectedTypes ?? this.selectedTypes,
     errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
     favoritesExpanded: favoritesExpanded ?? this.favoritesExpanded,
   );

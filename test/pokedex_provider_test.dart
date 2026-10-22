@@ -101,20 +101,73 @@ void main() {
       'poison',
       'water',
     ]);
-    controller().selectType('fire');
+    controller().toggleType('fire');
     expect(state().filteredPokemon.single.id, 4);
-    controller().selectType('poison');
+    controller().toggleType('fire');
+    controller().toggleType('poison');
     expect(state().filteredPokemon.single.id, 1);
-    controller().selectType('imaginary');
-    expect(state().selectedType, 'poison');
-    controller().selectType(null);
+    controller().toggleType('imaginary');
+    expect(state().selectedTypes, {'poison'});
+    controller().clearTypes();
     expect(state().filteredPokemon.length, 4);
   });
+
+  test(
+    'AND matching excludes Pokémon that have only one selected type',
+    () async {
+      service.loader = () async => [
+        ...samplePokemon,
+        Pokemon(id: 152, name: 'chikorita', imageUrl: '', types: ['grass']),
+        Pokemon(id: 23, name: 'ekans', imageUrl: '', types: ['poison']),
+      ];
+      await load();
+      controller().toggleType('grass');
+      expect(state().filteredPokemon.map((p) => p.id), [1, 152]);
+      controller().toggleType('poison');
+      expect(state().selectedTypes, {'grass', 'poison'});
+      expect(state().filteredPokemon.map((p) => p.id), [1]);
+      controller().toggleType('grass');
+      expect(state().filteredPokemon.map((p) => p.id), [1, 23]);
+      controller().toggleType('poison');
+      expect(state().selectedTypes, isEmpty);
+      expect(state().filteredPokemon.length, 6);
+    },
+  );
+
+  test(
+    'unmatched combinations and three selected types return no results',
+    () async {
+      await load();
+      controller().toggleType('grass');
+      controller().toggleType('fire');
+      expect(state().filteredPokemon, isEmpty);
+      controller().toggleType('poison');
+      expect(state().selectedTypes.length, 3);
+      expect(state().filteredPokemon, isEmpty);
+      controller().clearTypes();
+      expect(state().filteredPokemon.length, 4);
+    },
+  );
+
+  test(
+    'a selected type can be deselected after it disappears on refresh',
+    () async {
+      await load();
+      controller().toggleType('fire');
+      service.loader = () async => [samplePokemon.first];
+      await load();
+      expect(state().availableTypes, isNot(contains('fire')));
+      expect(state().selectedTypes, {'fire'});
+      controller().toggleType('fire');
+      expect(state().selectedTypes, isEmpty);
+      expect(state().filteredPokemon.single.id, 1);
+    },
+  );
 
   test('filtering never removes a favorite from the panel', () async {
     await load();
     controller().toggleFavorite(7);
-    controller().selectType('fire');
+    controller().toggleType('fire');
     expect(state().filteredPokemon.single.id, 4);
     expect(state().favorites.single.id, 7);
     controller().toggleFavoritesPanel();
@@ -129,7 +182,8 @@ void main() {
       await load();
       controller().saveNickname(1, 'Sprout');
       controller().toggleFavorite(1);
-      controller().selectType('grass');
+      controller().toggleType('grass');
+      controller().toggleType('poison');
       controller().toggleFavoritesPanel();
       final pending = Completer<List<Pokemon>>();
       service.loader = () => pending.future;
@@ -140,7 +194,7 @@ void main() {
       await refresh;
       expect(state().nicknames[1], 'Fresh Sprout');
       expect(state().favoriteIds, {1, 7});
-      expect(state().selectedType, 'grass');
+      expect(state().selectedTypes, {'grass', 'poison'});
       expect(state().favoritesExpanded, isTrue);
     },
   );
@@ -182,12 +236,12 @@ void main() {
 
   test('empty API results and no filter matches are distinct', () async {
     await load();
-    controller().selectType('fire');
+    controller().toggleType('fire');
     service.loader = () async => [samplePokemon.first];
     await load();
     expect(state().pokemon, isNotEmpty);
     expect(state().filteredPokemon, isEmpty);
-    controller().selectType(null);
+    controller().clearTypes();
     expect(state().filteredPokemon.length, 1);
     service.loader = () async => [];
     await load();
@@ -202,6 +256,7 @@ void main() {
       controller().toggleFavorite(1);
       expect(() => state().pokemon.clear(), throwsUnsupportedError);
       expect(() => state().favoriteIds.add(7), throwsUnsupportedError);
+      expect(() => state().selectedTypes.add('fire'), throwsUnsupportedError);
       expect(() => state().nicknames[1] = 'Mutated', throwsUnsupportedError);
       service.loader = () async => [samplePokemon[1]];
       await load();

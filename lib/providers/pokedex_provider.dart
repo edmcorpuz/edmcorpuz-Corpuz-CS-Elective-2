@@ -80,9 +80,18 @@ class PokedexController extends Notifier<PokedexState> {
     state = state.copyWith(nicknames: names);
   }
 
-  void selectType(String? type) {
-    if (type != null && !state.availableTypes.contains(type)) return;
-    state = state.copyWith(selectedType: type, clearType: type == null);
+  void toggleType(String type) {
+    final types = {...state.selectedTypes};
+    // A selected type can still be removed if a refresh drops it from the API.
+    if (!types.remove(type)) {
+      if (!state.availableTypes.contains(type)) return;
+      types.add(type);
+    }
+    state = state.copyWith(selectedTypes: types);
+  }
+
+  void clearTypes() {
+    state = state.copyWith(selectedTypes: {});
   }
 
   void toggleFavoritesPanel() {

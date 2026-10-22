@@ -96,31 +96,36 @@ class PokedexScreen extends ConsumerWidget {
                               fontWeight: FontWeight.w800,
                             ),
                           ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Select one or more. Pokémon must match every selected type.',
+                            style: TextStyle(fontSize: 12),
+                          ),
                           const SizedBox(height: 8),
                           Wrap(
                             spacing: 7,
                             runSpacing: 5,
                             children: [
-                              ChoiceChip(
+                              FilterChip(
                                 key: const ValueKey('type-all'),
                                 label: const Text('All types'),
-                                selected: state.selectedType == null,
-                                onSelected: (_) => controller.selectType(null),
+                                selected: state.selectedTypes.isEmpty,
+                                onSelected: (_) => controller.clearTypes(),
                               ),
                               ...state.availableTypes.map(
-                                (type) => ChoiceChip(
+                                (type) => FilterChip(
                                   key: ValueKey('type-$type'),
                                   label: Text(Pokemon.titleCase(type)),
-                                  selected: state.selectedType == type,
+                                  selected: state.selectedTypes.contains(type),
                                   onSelected: (_) =>
-                                      controller.selectType(type),
+                                      controller.toggleType(type),
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            '${visible.length} of ${state.pokemon.length} Pokémon${state.selectedType == null ? '' : ' · ${Pokemon.titleCase(state.selectedType!)}'}',
+                            '${visible.length} of ${state.pokemon.length} Pokémon${state.selectedTypes.isEmpty ? '' : ' · ${state.selectedTypes.map(Pokemon.titleCase).join(' + ')}'}',
                             key: const ValueKey('result-count'),
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
@@ -183,12 +188,12 @@ class PokedexScreen extends ConsumerWidget {
                     SliverFillRemaining(
                       hasScrollBody: false,
                       child: PokedexStatus(
-                        title: 'No Pokémon match this type',
+                        title: 'No Pokémon match this combination',
                         message:
-                            'Try All types to see the complete loaded collection.',
+                            'Deselect a type or choose All types to see more Pokémon.',
                         icon: Icons.filter_alt_off_outlined,
-                        onRetry: () => controller.selectType(null),
-                        actionLabel: 'Clear type filter',
+                        onRetry: controller.clearTypes,
+                        actionLabel: 'Clear type filters',
                       ),
                     ),
                 ] else if (state.status == LoadStatus.initial ||
