@@ -1,119 +1,236 @@
 import 'dart:async';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
+import 'package:unang_flutter_project/models/pokemon.dart';
 import 'package:unang_flutter_project/providers/pokedex_provider.dart';
+import 'package:unang_flutter_project/providers/pokedex_state.dart';
 import 'package:unang_flutter_project/services/pokemon_service.dart';
 
-const result =
-    '{"results":[{"name":"bulbasaur","url":"https://pokeapi.co/api/v2/pokemon/1/"}]}';
+import 'test_support.dart';
 
 void main() {
-  PokedexProvider create(http.Client client) {
-    final provider = PokedexProvider(service: PokemonService(client: client));
-    addTearDown(provider.dispose);
-    return provider;
-  }
-
-  test('notifies loading then success, stores immutable data', () async {
-    final provider = create(
-      MockClient((_) async => http.Response(result, 200)),
-    );
-    final states = <PokedexState>[];
-    provider.addListener(() => states.add(provider.state));
-    expect(provider.state, PokedexState.initial);
-    await provider.fetchPokemon();
-    expect(states, [PokedexState.loading, PokedexState.success]);
-    expect(provider.pokemon.single.name, 'bulbasaur');
-    expect(() => provider.pokemon.clear(), throwsUnsupportedError);
-    expect(provider.errorMessage, isNull);
+  late FakePokemonService service;
+  late ProviderContainer container;
+  setUp(() {
+    service = FakePokemonService();
+    container = testContainer(service);
   });
-
-  test('refresh shares pending requests and updates app state', () async {
-    var calls = 0;
-    final response = Completer<http.Response>();
-    final provider = create(
-      MockClient((_) {
-        calls++;
-        return calls == 1
-            ? response.future
-            : Future.value(http.Response('{"results":[]}', 200));
-      }),
-    );
-    final first = provider.fetchPokemon();
-    final duplicate = provider.fetchPokemon();
-    expect(identical(first, duplicate), isTrue);
-    expect(provider.isLoading, isTrue);
-    response.complete(http.Response(result, 200));
-    await first;
-    expect(calls, 1);
-    await provider.fetchPokemon();
-    expect(calls, 2);
-    expect(provider.state, PokedexState.empty);
-    expect(provider.pokemon, isEmpty);
-  });
-
-  test('error is stored and cleared on retry', () async {
-    var calls = 0;
-    final provider = create(
-      MockClient(
-        (_) async =>
-            ++calls == 1 ? http.Response('', 503) : http.Response(result, 200),
-      ),
-    );
-    await provider.fetchPokemon();
-    expect(provider.state, PokedexState.error);
-    expect(provider.errorMessage, contains('503'));
-    await provider.fetchPokemon();
-    expect(provider.state, PokedexState.success);
-    expect(provider.errorMessage, isNull);
-  });
+  tearDown(() => container.dispose());
+  PokedexController controller() => container.read(pokedexProvider.notifier);
+  PokedexState state() => container.read(pokedexProvider);
+  Future<void> load() => controller().fetchPokemon();
 
   test(
-    'selection comes from app state and survives successful refresh',
+    'startup calls existing fetch and transitions initial/loading/success',
     () async {
-      final provider = create(
-        MockClient((_) async => http.Response(result, 200)),
+      final seen = <LoadStatus>[];
+      final subscription = container.listen(
+        pokedexProvider,
+        (_, value) => seen.add(value.status),
+        fireImmediately: true,
       );
-      await provider.fetchPokemon();
-      provider.selectPokemon(999);
-      expect(provider.selectedPokemon, isNull);
-      provider.selectPokemon(1);
-      expect(provider.selectedPokemon, same(provider.pokemon.single));
-      await provider.fetchPokemon();
-      expect(provider.selectedPokemon, same(provider.pokemon.single));
+      await Future<void>.delayed(Duration.zero);
+      expect(seen, [
+        LoadStatus.initial,
+        LoadStatus.loading,
+        LoadStatus.success,
+      ]);
+      expect(service.calls, 1);
+      expect(state().pokemon.length, 4);
+      subscription.close();
     },
   );
 
-  test('selection clears if refreshed results no longer contain it', () async {
-    var calls = 0;
-    final provider = create(
-      MockClient(
-        (_) async =>
-            http.Response(++calls == 1 ? result : '{"results":[]}', 200),
-      ),
-    );
-    await provider.fetchPokemon();
-    provider.selectPokemon(1);
-    await provider.fetchPokemon();
-    expect(provider.selectedPokemon, isNull);
+  test('coalesces concurrent calls to the same fetch method', () async {
+    final pending = Completer<List<Pokemon>>();
+    service.loader = () => pending.future;
+    final first = load();
+    final second = load();
+    expect(identical(first, second), isTrue);
+    await Future<void>.delayed(Duration.zero);
+    expect(service.calls, 1);
+    pending.complete(samplePokemon);
+    await first;
+    await load();
+    expect(service.calls, 2);
   });
 
-  test('in-flight completion never notifies after disposal', () async {
-    final response = Completer<http.Response>();
-    final provider = PokedexProvider(
-      service: PokemonService(client: MockClient((_) => response.future)),
-    );
-    var notifications = 0;
-    provider.addListener(() => notifications++);
-    final pending = provider.fetchPokemon();
-    expect(notifications, 1);
-    provider.dispose();
-    response.complete(http.Response(result, 200));
-    await pending;
-    expect(notifications, 1);
-    await provider.fetchPokemon();
-    expect(notifications, 1);
+  test(
+    'favorites toggle both ways and reject IDs outside the dataset',
+    () async {
+      await load();
+      controller().toggleFavorite(1);
+      expect(state().favoriteIds, {1});
+      expect(state().favorites.single.name, 'bulbasaur');
+      controller().toggleFavorite(10000);
+      expect(state().favoriteIds, {1});
+      controller().toggleFavorite(1);
+      expect(state().favorites, isEmpty);
+    },
+  );
+
+  test(
+    'nickname add/edit/remove trims input and retains original name',
+    () async {
+      await load();
+      controller().saveNickname(1, '  Sprout  ');
+      expect(state().nicknames[1], 'Sprout');
+      controller().saveNickname(1, 'Leafy');
+      expect(state().nicknames[1], 'Leafy');
+      expect(state().pokemonById(1)!.name, 'bulbasaur');
+      controller().removeNickname(1);
+      expect(state().nicknames, isEmpty);
+    },
+  );
+
+  test('rejects blank/overlong nicknames and unknown IDs', () async {
+    await load();
+    expect(() => controller().saveNickname(1, '   '), throwsArgumentError);
+    expect(() => controller().saveNickname(1, 'x' * 31), throwsArgumentError);
+    controller().saveNickname(9999, 'Missing');
+    expect(state().nicknames, isEmpty);
   });
+
+  test('filters by real types, supports secondary types, and clears', () async {
+    await load();
+    expect(state().availableTypes, [
+      'electric',
+      'fire',
+      'grass',
+      'poison',
+      'water',
+    ]);
+    controller().selectType('fire');
+    expect(state().filteredPokemon.single.id, 4);
+    controller().selectType('poison');
+    expect(state().filteredPokemon.single.id, 1);
+    controller().selectType('imaginary');
+    expect(state().selectedType, 'poison');
+    controller().selectType(null);
+    expect(state().filteredPokemon.length, 4);
+  });
+
+  test('filtering never removes a favorite from the panel', () async {
+    await load();
+    controller().toggleFavorite(7);
+    controller().selectType('fire');
+    expect(state().filteredPokemon.single.id, 4);
+    expect(state().favorites.single.id, 7);
+    controller().toggleFavoritesPanel();
+    expect(state().favoritesExpanded, isTrue);
+    controller().toggleFavoritesPanel();
+    expect(state().favoritesExpanded, isFalse);
+  });
+
+  test(
+    'refresh retains nickname/favorite/filter/panel and concurrent changes',
+    () async {
+      await load();
+      controller().saveNickname(1, 'Sprout');
+      controller().toggleFavorite(1);
+      controller().selectType('grass');
+      controller().toggleFavoritesPanel();
+      final pending = Completer<List<Pokemon>>();
+      service.loader = () => pending.future;
+      final refresh = load();
+      controller().saveNickname(1, 'Fresh Sprout');
+      controller().toggleFavorite(7);
+      pending.complete(samplePokemon);
+      await refresh;
+      expect(state().nicknames[1], 'Fresh Sprout');
+      expect(state().favoriteIds, {1, 7});
+      expect(state().selectedType, 'grass');
+      expect(state().favoritesExpanded, isTrue);
+    },
+  );
+
+  test('initial API error is meaningful and retry recovers', () async {
+    service.loader = () async => throw const PokemonApiException('Offline.');
+    await load();
+    expect(state().status, LoadStatus.error);
+    expect(state().errorMessage, 'Offline.');
+    expect(state().pokemon, isEmpty);
+    service.loader = () async => samplePokemon;
+    await load();
+    expect(state().status, LoadStatus.success);
+    expect(state().errorMessage, isNull);
+  });
+
+  test(
+    'refresh error preserves the last good collection and personalizations',
+    () async {
+      await load();
+      controller().saveNickname(1, 'Sprout');
+      controller().toggleFavorite(1);
+      service.loader = () async =>
+          throw const PokemonApiException('Try again.');
+      await load();
+      expect(state().status, LoadStatus.error);
+      expect(state().pokemon.length, 4);
+      expect(state().nicknames[1], 'Sprout');
+      expect(state().favorites.single.id, 1);
+    },
+  );
+
+  test('unknown errors do not expose raw exception details', () async {
+    service.loader = () async =>
+        throw StateError('Internal implementation details');
+    await load();
+    expect(state().errorMessage, 'Something went wrong. Please try again.');
+  });
+
+  test('empty API results and no filter matches are distinct', () async {
+    await load();
+    controller().selectType('fire');
+    service.loader = () async => [samplePokemon.first];
+    await load();
+    expect(state().pokemon, isNotEmpty);
+    expect(state().filteredPokemon, isEmpty);
+    controller().selectType(null);
+    expect(state().filteredPokemon.length, 1);
+    service.loader = () async => [];
+    await load();
+    expect(state().status, LoadStatus.success);
+    expect(state().pokemon, isEmpty);
+  });
+
+  test(
+    'state is immutable and removed records do not become ghost favorites',
+    () async {
+      await load();
+      controller().toggleFavorite(1);
+      expect(() => state().pokemon.clear(), throwsUnsupportedError);
+      expect(() => state().favoriteIds.add(7), throwsUnsupportedError);
+      expect(() => state().nicknames[1] = 'Mutated', throwsUnsupportedError);
+      service.loader = () async => [samplePokemon[1]];
+      await load();
+      expect(state().favorites, isEmpty);
+      expect(state().pokemonById(1), isNull);
+    },
+  );
+
+  test('disposal closes service and safely ignores a late result', () async {
+    final pending = Completer<List<Pokemon>>();
+    service.loader = () => pending.future;
+    final request = load();
+    container.dispose();
+    expect(service.disposed, isTrue);
+    pending.complete(samplePokemon);
+    await expectLater(request, completes);
+  });
+
+  test(
+    'a fresh app scope starts without session-only personalizations',
+    () async {
+      await load();
+      controller().saveNickname(1, 'Sprout');
+      controller().toggleFavorite(1);
+      final other = testContainer(FakePokemonService());
+      await other.read(pokedexProvider.notifier).fetchPokemon();
+      expect(other.read(pokedexProvider).nicknames, isEmpty);
+      expect(other.read(pokedexProvider).favoriteIds, isEmpty);
+      other.dispose();
+    },
+  );
 }

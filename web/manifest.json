@@ -1,11 +1,11 @@
 {
-    "name": "unang_flutter_project",
-    "short_name": "unang_flutter_project",
+    "name": "Pokédex · Field Notes",
+    "short_name": "Pokédex",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F6F7F2",
+    "theme_color": "#226653",
+    "description": "Discover Pokémon, save favorites, and make them your own.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

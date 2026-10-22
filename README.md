@@ -1,105 +1,180 @@
-# Pokédex — Provider State Management Activity
+# Pokédex · Field Notes
 
-CS Elective 2 · Ezekiel Daniel Corpuz
+**CS Elective 2 — Flutter Midterm**
 
-## Submission links
+A responsive Pokédex with personal nicknames, a shared retractable favorites panel,
+and filtering based on real Pokémon type data. **Riverpod is the only application
+state-management approach.**
 
-**State Management Activity (`state-mgt-act`):**
+## Submission branch
 
-https://github.com/edmcorpuz/edmcorpuz-Corpuz-CS-Elective-2/tree/state-mgt-act
+[Open `midterm-exam`](https://github.com/edmcorpuz/edmcorpuz-Corpuz-CS-Elective-2/tree/midterm-exam)
 
-**Dart Async Activity (`pokedex-act`, grid only):**
+This branch continues the latest Pokédex activity, `state-mgt-act`, at
+`71141a32ce6efbbae152c0cb824dcede0e6619cc`. It migrates the previous Provider
+implementation rather than replacing the repository with an unrelated project.
+The previous activity branches and `main` are unchanged.
 
-https://github.com/edmcorpuz/edmcorpuz-Corpuz-CS-Elective-2/tree/pokedex-act
+The original requirements are preserved in [docs/ASSIGNMENT.md](docs/ASSIGNMENT.md).
 
-Submit the appropriate **branch-specific link** in Daigler. The async branch
-intentionally stops at the grid; this continuation adds the details page.
+![Desktop Pokédex with live data](docs/images/desktop.png)
 
-## Requirements implemented
+[Phone layout](docs/images/mobile.png)
 
-- Fetch `https://pokeapi.co/api/v2/pokemon?limit=30&offset=0`.
-- Use a dedicated immutable `Pokemon` class: name, image URL, ID.
-- Display at most 30 Pokémon in a responsive, scrollable grid.
-- Manage initial, loading, success, error, and empty states with Provider.
-- Expose the API action as `PokedexProvider.fetchPokemon()`.
-- Refresh using the app-bar button or pull-to-refresh on the grid.
-- Show retry actions for errors and empty results.
-- Open an individual page displaying the selected name, image, and ID.
-- Read grid data, request status, error, and selection from shared app state.
-- Handle loading/broken artwork, HTTP errors, network errors, malformed data,
-  and a 15-second timeout.
+## The five required features
 
-## State ownership and data flow
+| Requirement | Implementation |
+| --- | --- |
+| List management | `PokedexController.fetchPokemon()` owns loading, success, and error state. Startup, the home refresh button, pull-to-refresh, and retry all call this **same** method. There is no separate `refresh()` action. |
+| Nickname editor | Add, edit, validate, cancel, or remove a nickname through a dialog. Nicknames are stored by Pokémon ID in Riverpod and update the card, detail page, and favorites panel immediately. Original names remain visible. |
+| Favorites panel | One expandable/collapsible panel is available in the app bar on **both home and detail pages**. It has an empty state and lets users open or remove favorites. Expansion state survives route navigation. |
+| Heart indicator | Every Pokémon card has a real favorite toggle. Filled/outlined hearts, the panel, and its count all react to the same ID set. Details have the same toggle. |
+| Type filter | Chips are derived from actual `types` returned by PokéAPI. Dual-type Pokémon match either type. **All types** clears the filter. Filtering does not change the favorites panel or delete nicknames. |
 
-`ChangeNotifierProvider` creates one `PokedexProvider` above `MaterialApp`,
-starts its first fetch, and disposes it when the app is removed.
+Extras include real height/weight/base stats on the detail page, accessible button
+labels, image-loading/error fallbacks, and responsive layouts with large-text
+support. No secret API key or account is required.
 
-```text
-Screen action -> Provider.fetchPokemon() -> PokemonService -> PokéAPI
-                         |
-                  notifyListeners()
-                         |
-                  context.watch() -> updated UI
+## Run in VS Code
+
+Prerequisites: Flutter **3.44.8** (includes Dart **3.12.2**), Chrome, and the
+recommended Dart/Flutter VS Code extensions. The SDK is pinned in `.mise.toml`.
+Use **mise** to install/manage the SDK; do not manually edit PATH.
+
+```sh
+mise install
+mise exec -- flutter pub get
+mise exec -- flutter run -d chrome
 ```
 
-The service owns HTTP and JSON parsing. The Provider's API method owns the
-loading/error/success transitions and the resulting immutable list. Concurrent
-refresh calls share one in-flight Future; disposal safely ignores late results.
+On Windows, if your shell cannot directly launch Flutter's batch wrapper:
 
-Both screens are stateless. They do not hold local Pokémon copies, loading
-flags, or error values. Tapping a card records its ID in Provider before
-navigation. The details screen reads `selectedPokemon` from Provider, not
-constructor/route data. Successful refresh resolves the selection against the
-new app-state list; missing selections are cleared. Names and formatted IDs
-are computed from model values in app state. Static labels and image-loading
-indicators are presentation concerns, not a second source of application data.
+```powershell
+mise exec -- cmd /c flutter pub get
+mise exec -- cmd /c flutter run -d chrome
+```
 
-## Why Future instead of Stream?
+Open this repository folder in VS Code. Select **Pokédex (Chrome)** in Run and
+Debug and press **F5**. A selected-device launch configuration is also included.
+If the extension asks for an SDK, choose the installed SDK reported by
+`mise where flutter`; do not commit a machine-specific SDK path.
 
-An HTTP request returns one list, so `Future<List<Pokemon>>` is appropriate.
-A Stream would fit ongoing events or a live subscription, neither of which
-PokéAPI provides here. Each refresh makes a new one-shot request. Provider
-notifies the UI of state changes; it does not turn the API into a Stream.
-IDs are parsed from Pokémon URLs and used in official-artwork URLs, avoiding
-30 extra detail requests.
+An Android emulator/device also requires Android SDK setup and accepted licenses.
+Android internet permission is already included. **The development computer has
+no Android SDK or Windows native C++ toolchain**, so the native Android/Windows
+builds were not verified. Web release and real Chrome execution were verified.
+iOS/macOS builds were not run on this Windows host.
 
-## Structure
+## API and dataset
+
+The data source and list endpoint from the existing activity are retained:
+
+```text
+https://pokeapi.co/api/v2/pokemon?limit=30&offset=0
+```
+
+- The collection is the **first 30 Pokémon**, not the entire Pokédex.
+- The list response has no type information, so the service fetches
+  `/api/v2/pokemon/{id}` details, **at most six requests concurrently**.
+- A normal fetch uses one list request plus 30 detail requests. Artwork requests
+  are separate. Each HTTP request has a 15-second timeout.
+- Types, dimensions, and stats are parsed from the API. The small type-to-color
+  map only controls presentation; it does not determine Pokémon types.
+- The live first-30 dataset currently offers nine types: Bug, Electric, Fire,
+  Flying, Grass, Ground, Normal, Poison, and Water.
+- Artwork remains the official-artwork sprite source used in the prior activity.
+
+## State and data flow
+
+```text
+ProviderScope
+  ├── pokemonServiceProvider → HTTP client + parsing + lifecycle cleanup
+  └── pokedexProvider: NotifierProvider<PokedexController, PokedexState>
+        ├── Pokémon list + load status + readable error
+        ├── favorite IDs + nickname map
+        └── selected type + favorites-panel expansion
+
+UI event → ref.read(pokedexProvider.notifier).method()
+              → immutable replacement of state
+              → ref.watch(...) → subscribed UI rebuilds
+```
+
+`PokedexState` has immutable lists/maps/sets and derived getters for visible
+Pokémon, favorites, and available types. The type filter never mutates the
+source list. Favorite and nickname identity is based on stable Pokémon IDs.
+
+The controller uses Riverpod's modern `Notifier`, not `ChangeNotifier`, legacy
+`StateNotifier`, BLoC, or a second global-state system. An explicit load-status
+field lets a refresh display progress without throwing away the last successful
+collection. A failed refresh preserves that collection and its personalizations.
+An initial failure instead shows a full error/retry state.
+
+Concurrent refreshes share one in-flight Future. Async completion copies the
+**current** state so edits made during loading are not overwritten. `ref.mounted`
+prevents writes after disposal; `ref.onDispose` closes the HTTP client.
+
+The detail route carries only an ID and resolves its model from Riverpod. This
+keeps stacked detail routes correct when opening another favorite and then going
+back. The nickname dialog owns only a temporary text controller and Form, and
+disposes the controller when closed. Saving/removing changes shared Riverpod state.
+
+## Important scope boundaries
+
+- **Nicknames and favorites are session-only app state**, as required. They survive
+  page navigation, filtering, and in-app data refresh. They do **not** survive a
+  full app restart/browser reload. There is no database or persistent settings store.
+- Internet access is required for first load and artwork. Keeping an already-loaded
+  list after a failed refresh is **not** persistent offline caching.
+- If a later response no longer contains an ID, it is not shown as a ghost favorite.
+  Its saved in-session metadata can be reused if that ID reappears.
+- An empty API response and a nonempty collection with zero filter matches have
+  distinct messages. Clearing the type filter restores the loaded collection.
+- No Provider package imports, `ChangeNotifierProvider`, or BLoC implementation
+  remain. `flutter_riverpod` supplies the Riverpod ecosystem transitively.
+
+## Files to inspect
 
 ```text
 lib/
-  main.dart                   Provider scope, application, theme
-  models/pokemon.dart         Immutable Pokémon model
-  providers/                 App data, request state, selection, API action
-  services/                  HTTP, timeout, parsing, readable errors
-  screens/                   Grid and Provider-backed details page
-  widgets/                   Reusable grid, card, image, status components
-test/                        Service, model, Provider, and widget tests
+  main.dart                         ProviderScope, MaterialApp, visual theme
+  models/pokemon.dart               Immutable API model and JSON validation
+  providers/pokedex_state.dart      Immutable state and derived collections
+  providers/pokedex_provider.dart   Riverpod providers and all state actions
+  services/pokemon_service.dart     HTTP, batching, parsing, readable failures
+  screens/pokedex_screen.dart       Refreshable home, type chips, list states
+  screens/pokemon_detail_screen.dart Shared-state detail, nickname, dimensions/stats
+  widgets/pokedex_shell.dart        Shared app bar and retractable favorites
+  widgets/favorite_button.dart      Reactive heart toggle
+  widgets/nickname_editor.dart      Form, validation, save/remove, cleanup
+  widgets/pokemon_card.dart         Original name, nickname, image, heart, types
+  widgets/pokemon_grid.dart         Responsive sliver grid
+  widgets/pokemon_image.dart        Network image, loading/error fallback
+  widgets/pokedex_status.dart       Reusable error/empty states
+  widgets/type_badge.dart           Display-only type colors and labels
+
+test/                               Service, model, Riverpod, widget tests
+tool/verify_live_api.dart            Optional real-PokéAPI integration check
+docs/ASSIGNMENT.md                   Original assignment
+docs/VERIFICATION.md                 Actual verification results and limits
 ```
 
-## Run locally in VS Code
-
-Developed with Flutter 3.44.8 / Dart 3.12.2. Open the repository folder in
-VS Code, use its Flutter extension, select a device, and press **F5**.
-The included `.vscode/launch.json` also offers a Chrome configuration.
+## Verify
 
 ```sh
-flutter pub get
-flutter run -d chrome
+mise exec -- dart format --output=none --set-exit-if-changed lib test tool
+mise exec -- flutter analyze
+mise exec -- flutter test
+mise exec -- flutter build web
+mise exec -- dart run tool/verify_live_api.dart
 ```
 
-Internet access is required for PokéAPI and artwork. Android internet
-permission and macOS outgoing-network entitlements are included.
+Use `mise exec -- cmd /c ...` for these commands on Windows if needed. The unit and
+widget tests use injected service/mock HTTP data and do not require a working
+PokéAPI connection. The final command intentionally calls the real API.
 
-## Verification
+**Verified:** 44 automated tests passed; static analysis clean; production web
+build succeeded; live API returned all 30 Pokémon with real types; the release
+ran in Chrome at desktop and phone sizes. See [verification details](docs/VERIFICATION.md).
 
-```sh
-dart format --output=none --set-exit-if-changed lib test
-flutter analyze
-flutter test
-flutter build web
-```
-
-Tests use mock HTTP responses and cover the 30-result cap, model parsing,
-HTTP/network/timeout/malformed-data errors, Provider transitions, refresh
-coalescing, selection lifecycle, safe disposal, error/retry/empty UI, both
-refresh interactions, scrolling at phone width, and detail navigation.
+Pokémon names/artwork belong to their respective owners. Data is provided by
+[PokéAPI](https://pokeapi.co/); this is an educational, noncommercial project.

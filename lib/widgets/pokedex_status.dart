@@ -7,11 +7,13 @@ class PokedexStatus extends StatelessWidget {
     required this.message,
     required this.icon,
     this.onRetry,
+    this.actionLabel = 'Try again',
   });
   final String title;
   final String message;
   final IconData icon;
   final VoidCallback? onRetry;
+  final String actionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +37,7 @@ class PokedexStatus extends StatelessWidget {
               FilledButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Try again'),
+                label: Text(actionLabel),
               ),
             ],
           ],

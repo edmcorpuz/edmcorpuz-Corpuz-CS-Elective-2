@@ -1,74 +1,91 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
 
-import '../models/pokemon.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../services/pokemon_service.dart';
+import 'pokedex_state.dart';
 
-enum PokedexState { initial, loading, success, empty, error }
+final pokemonServiceProvider = Provider<PokemonService>((ref) {
+  final service = PokemonService();
+  ref.onDispose(service.dispose);
+  return service;
+});
 
-/// Owns the data, request status, error, and selected Pokémon for every page.
-class PokedexProvider extends ChangeNotifier {
-  PokedexProvider({PokemonService? service})
-    : _service = service ?? PokemonService();
+// Kept alive for the app's ProviderScope: routes share the same favorites,
+// nicknames, filter, and panel state. No legacy Provider or BLoC is used.
+final pokedexProvider = NotifierProvider<PokedexController, PokedexState>(
+  PokedexController.new,
+);
 
-  final PokemonService _service;
-  List<Pokemon> _pokemon = const [];
-  PokedexState _state = PokedexState.initial;
-  String? _errorMessage;
-  int? _selectedId;
+class PokedexController extends Notifier<PokedexState> {
   Future<void>? _inFlight;
-  bool _disposed = false;
 
-  List<Pokemon> get pokemon => _pokemon;
-  PokedexState get state => _state;
-  String? get errorMessage => _errorMessage;
-  bool get isLoading => _state == PokedexState.loading;
-
-  Pokemon? get selectedPokemon {
-    for (final item in _pokemon) {
-      if (item.id == _selectedId) return item;
-    }
-    return null;
+  @override
+  PokedexState build() {
+    // Defer the initial write until after the first widget build.
+    Future.microtask(() {
+      if (ref.mounted) unawaited(fetchPokemon());
+    });
+    return PokedexState();
   }
 
-  /// UI actions invoke this Provider method; HTTP details stay in the service.
-  /// Concurrent refresh gestures share the same request.
+  /// Startup, toolbar refresh, pull-to-refresh, and retry ALL recall this
+  /// existing action. Concurrent callers share a single in-flight Future.
   Future<void> fetchPokemon() {
-    if (_disposed) return Future.value();
+    if (!ref.mounted) return Future.value();
     return _inFlight ??= _loadPokemon().whenComplete(() => _inFlight = null);
   }
 
   Future<void> _loadPokemon() async {
-    _state = PokedexState.loading;
-    _errorMessage = null;
-    notifyListeners();
+    state = state.copyWith(status: LoadStatus.loading, clearError: true);
     try {
-      final result = await _service.fetchPokemon();
-      if (_disposed) return;
-      _pokemon = List.unmodifiable(result);
-      _state = _pokemon.isEmpty ? PokedexState.empty : PokedexState.success;
-      if (selectedPokemon == null) _selectedId = null;
+      final result = await ref.read(pokemonServiceProvider).fetchPokemon();
+      if (!ref.mounted) return;
+      // Use the CURRENT state so edits made during a fetch are not overwritten.
+      state = state.copyWith(
+        pokemon: result,
+        status: LoadStatus.success,
+        clearError: true,
+      );
     } catch (error) {
-      if (_disposed) return;
-      _pokemon = const [];
-      _selectedId = null;
-      _errorMessage = error is PokemonApiException
-          ? error.message
-          : 'Something went wrong. Please try again.';
-      _state = PokedexState.error;
+      if (!ref.mounted) return;
+      // Keep the last successful list and all personalizations on refresh error.
+      state = state.copyWith(
+        status: LoadStatus.error,
+        errorMessage: error is PokemonApiException
+            ? error.message
+            : 'Something went wrong. Please try again.',
+      );
     }
-    notifyListeners();
   }
 
-  void selectPokemon(int id) {
-    if (_disposed || !_pokemon.any((item) => item.id == id)) return;
-    _selectedId = id;
-    notifyListeners();
+  void toggleFavorite(int id) {
+    if (state.pokemonById(id) == null) return;
+    final ids = {...state.favoriteIds};
+    if (!ids.add(id)) ids.remove(id);
+    state = state.copyWith(favoriteIds: ids);
   }
 
-  @override
-  void dispose() {
-    _disposed = true;
-    _service.dispose();
-    super.dispose();
+  void saveNickname(int id, String value) {
+    if (state.pokemonById(id) == null) return;
+    final name = value.trim();
+    if (name.isEmpty || name.length > 30) {
+      throw ArgumentError('Enter a nickname with 1–30 characters.');
+    }
+    state = state.copyWith(nicknames: {...state.nicknames, id: name});
+  }
+
+  void removeNickname(int id) {
+    final names = {...state.nicknames}..remove(id);
+    state = state.copyWith(nicknames: names);
+  }
+
+  void selectType(String? type) {
+    if (type != null && !state.availableTypes.contains(type)) return;
+    state = state.copyWith(selectedType: type, clearType: type == null);
+  }
+
+  void toggleFavoritesPanel() {
+    state = state.copyWith(favoritesExpanded: !state.favoritesExpanded);
   }
 }

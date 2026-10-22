@@ -13,39 +13,72 @@ class PokemonApiException implements Exception {
 }
 
 class PokemonService {
-  PokemonService({http.Client? client}) : _client = client ?? http.Client();
+  PokemonService({
+    http.Client? client,
+    this.timeout = const Duration(seconds: 15),
+  }) : _client = client ?? http.Client();
 
   static const limit = 30;
+  static const batchSize = 6;
   static final endpoint = Uri.https('pokeapi.co', '/api/v2/pokemon', {
     'limit': '$limit',
     'offset': '0',
   });
   final http.Client _client;
+  final Duration timeout;
 
-  /// A Future fits a one-time HTTP request returning one list, not live events.
+  Future<Map<String, dynamic>> _getJson(Uri uri) async {
+    final response = await _client.get(uri).timeout(timeout);
+    if (response.statusCode != 200) {
+      throw PokemonApiException(
+        'PokéAPI returned HTTP ${response.statusCode}. Please try again.',
+      );
+    }
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('Expected a JSON object.');
+    }
+    return decoded;
+  }
+
+  /// One list request plus at most 30 detail requests, six at a time.
+  /// The list endpoint does not contain types; details are necessary to filter
+  /// by actual API data. Refresh intentionally reuses this same method.
   Future<List<Pokemon>> fetchPokemon() async {
     try {
-      final response = await _client
-          .get(endpoint)
-          .timeout(const Duration(seconds: 15));
-      if (response.statusCode != 200) {
-        throw PokemonApiException(
-          'PokéAPI returned HTTP ${response.statusCode}. Please try again.',
+      final decoded = await _getJson(endpoint);
+      final raw = decoded['results'];
+      if (raw is! List) throw const FormatException('Missing Pokémon results.');
+      final summaries = raw.take(limit).map((entry) {
+        if (entry is! Map<String, dynamic>) {
+          throw const FormatException('Invalid Pokémon entry.');
+        }
+        return Pokemon.fromListJson(entry);
+      }).toList();
+      if (summaries.map((item) => item.id).toSet().length != summaries.length) {
+        throw const FormatException('Duplicate Pokémon IDs.');
+      }
+      final result = <Pokemon>[];
+      for (var offset = 0; offset < summaries.length; offset += batchSize) {
+        final batch = summaries.skip(offset).take(batchSize);
+        final details = await Future.wait(
+          batch.map((summary) async {
+            // Only call the known API host, not an arbitrary URL from JSON.
+            final json = await _getJson(
+              Uri.https('pokeapi.co', '/api/v2/pokemon/${summary.id}'),
+            );
+            final pokemon = Pokemon.fromDetailJson(json);
+            if (pokemon.id != summary.id || pokemon.name != summary.name) {
+              throw const FormatException(
+                'Pokémon detail does not match list.',
+              );
+            }
+            return pokemon;
+          }),
         );
+        result.addAll(details);
       }
-      final decoded = jsonDecode(response.body);
-      if (decoded is! Map<String, dynamic> || decoded['results'] is! List) {
-        throw const FormatException('Missing Pokémon results.');
-      }
-      final results = decoded['results'] as List;
-      return List.unmodifiable(
-        results.take(limit).map((item) {
-          if (item is! Map<String, dynamic>) {
-            throw const FormatException('Invalid Pokémon entry.');
-          }
-          return Pokemon.fromListJson(item);
-        }),
-      );
+      return List.unmodifiable(result);
     } on TimeoutException {
       throw const PokemonApiException(
         'The request timed out. Please try again.',

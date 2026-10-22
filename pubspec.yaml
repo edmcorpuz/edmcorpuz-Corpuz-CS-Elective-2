@@ -1,5 +1,5 @@
 name: unang_flutter_project
-description: "A Provider-managed Pokédex for the CS Elective 2 state management activity."
+description: "A Riverpod Pokédex with nicknames, favorites, and real Pokémon type filters."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -35,7 +35,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   http: ^1.6.0
-  provider: ^6.1.5+1
+  flutter_riverpod: ^3.4.3
 
 dev_dependencies:
   flutter_test:

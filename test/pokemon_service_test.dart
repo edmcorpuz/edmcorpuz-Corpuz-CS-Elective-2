@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -7,68 +6,123 @@ import 'package:http/testing.dart';
 import 'package:unang_flutter_project/models/pokemon.dart';
 import 'package:unang_flutter_project/services/pokemon_service.dart';
 
+Map<String, dynamic> detail(int id, {List<String> types = const ['fire']}) => {
+  'id': id,
+  'name': 'pokemon-$id',
+  'height': 7,
+  'weight': 69,
+  'types': [
+    for (var i = 0; i < types.length; i++)
+      {
+        'slot': i + 1,
+        'type': {'name': types[i]},
+      },
+  ],
+  'stats': [
+    {
+      'base_stat': 45,
+      'stat': {'name': 'hp'},
+    },
+  ],
+};
+Map<String, dynamic> list(int count) => {
+  'results': List.generate(
+    count,
+    (i) => {
+      'name': 'pokemon-${i + 1}',
+      'url': 'https://pokeapi.co/api/v2/pokemon/${i + 1}/',
+    },
+  ),
+};
+
 void main() {
-  test('model parses API ID, name and artwork', () {
-    final pokemon = Pokemon.fromListJson({
-      'name': 'mr-mime',
-      'url': 'https://pokeapi.co/api/v2/pokemon/122/',
-    });
-    expect(pokemon.id, 122);
-    expect(pokemon.displayId, '#122');
-    expect(pokemon.displayName, 'Mr Mime');
-    expect(pokemon.imageUrl, endsWith('/122.png'));
-  });
+  PokemonService service(
+    Future<http.Response> Function(http.Request) handler, {
+    Duration? timeout,
+  }) {
+    final value = PokemonService(
+      client: MockClient(handler),
+      timeout: timeout ?? const Duration(seconds: 15),
+    );
+    addTearDown(value.dispose);
+    return value;
+  }
 
-  test('model rejects malformed or non-positive IDs', () {
-    for (final url in ['invalid', 'https://pokeapi.co/api/v2/pokemon/0/']) {
-      expect(
-        () => Pokemon.fromListJson({'name': 'bulbasaur', 'url': url}),
-        throwsFormatException,
-      );
-    }
-  });
-
-  test('request uses limit 30 and enforces it on results', () async {
-    final service = PokemonService(
-      client: MockClient((request) async {
-        expect(request.url.host, 'pokeapi.co');
-        expect(request.url.queryParameters, {'limit': '30', 'offset': '0'});
+  test(
+    'preserves existing endpoint and caps list at 30, with real detail types',
+    () async {
+      final urls = <Uri>[];
+      final api = service((request) async {
+        urls.add(request.url);
+        if (request.url == PokemonService.endpoint) {
+          return http.Response(jsonEncode(list(35)), 200);
+        }
         return http.Response(
-          jsonEncode({
-            'results': List.generate(
-              35,
-              (i) => {
-                'name': 'pokemon-${i + 1}',
-                'url': 'https://pokeapi.co/api/v2/pokemon/${i + 1}/',
-              },
+          jsonEncode(
+            detail(
+              int.parse(request.url.pathSegments.last),
+              types: ['water', 'flying'],
             ),
-          }),
+          ),
           200,
         );
-      }),
-    );
-    addTearDown(service.dispose);
-    final pokemon = await service.fetchPokemon();
-    expect(pokemon, hasLength(30));
-    expect(pokemon.last.id, 30);
-    expect(() => pokemon.clear(), throwsUnsupportedError);
+      });
+      final result = await api.fetchPokemon();
+      expect(result.length, 30);
+      expect(urls.length, 31);
+      expect(
+        urls.first.toString(),
+        'https://pokeapi.co/api/v2/pokemon?limit=30&offset=0',
+      );
+      expect(result.first.types, [
+        'water',
+        'flying',
+      ]); // Not inferred from ID 1.
+      expect(result.last.id, 30);
+      expect(result.first.heightMetres, 0.7);
+      expect(result.first.weightKilograms, 6.9);
+      expect(result.first.stats['hp'], 45);
+      expect(result.first.imageUrl, contains('official-artwork/1.png'));
+      expect(() => result.clear(), throwsUnsupportedError);
+      expect(() => result.first.types.clear(), throwsUnsupportedError);
+    },
+  );
+
+  test(
+    'detail request concurrency never exceeds six and order stays stable',
+    () async {
+      var active = 0, maximum = 0;
+      final api = service((request) async {
+        if (request.url == PokemonService.endpoint) {
+          return http.Response(jsonEncode(list(14)), 200);
+        }
+        active++;
+        if (active > maximum) maximum = active;
+        final id = int.parse(request.url.pathSegments.last);
+        await Future<void>.delayed(Duration(milliseconds: 15 - id));
+        active--;
+        return http.Response(jsonEncode(detail(id)), 200);
+      });
+      final result = await api.fetchPokemon();
+      expect(maximum, 6);
+      expect(result.map((p) => p.id), List.generate(14, (i) => i + 1));
+    },
+  );
+
+  test('empty list returns empty and sends no detail requests', () async {
+    var calls = 0;
+    final api = service((_) async {
+      calls++;
+      return http.Response('{"results":[]}', 200);
+    });
+    expect(await api.fetchPokemon(), isEmpty);
+    expect(calls, 1);
   });
 
-  test('empty API results remain empty', () async {
-    final service = PokemonService(
-      client: MockClient((_) async => http.Response('{"results":[]}', 200)),
-    );
-    addTearDown(service.dispose);
-    expect(await service.fetchPokemon(), isEmpty);
-  });
-
-  test('non-200 responses become readable errors', () async {
-    final service = PokemonService(
-      client: MockClient((_) async => http.Response('', 503)),
-    );
-    addTearDown(service.dispose);
+  test('HTTP errors are readable', () async {
+    final api = service((_) async => http.Response('Unavailable', 503));
     await expectLater(
-      service.fetchPokemon(),
+      api.fetchPokemon(),
       throwsA(
         isA<PokemonApiException>().having(
           (e) => e.message,
@@ -79,48 +133,47 @@ void main() {
     );
   });
 
-  for (final body in [
-    'not-json',
-    '{}',
-    '{"results":[42]}',
-    '{"results":[{"name":"a","url":"bad"}]}',
-  ]) {
-    test('rejects malformed response: $body', () async {
-      final service = PokemonService(
-        client: MockClient((_) async => http.Response(body, 200)),
-      );
-      addTearDown(service.dispose);
-      await expectLater(
-        service.fetchPokemon(),
-        throwsA(isA<PokemonApiException>()),
-      );
-    });
-  }
-
-  test('network failures become readable errors', () async {
-    final service = PokemonService(
-      client: MockClient((_) async => throw http.ClientException('offline')),
+  test('detail HTTP errors fail the list rather than invent types', () async {
+    final api = service(
+      (r) async => r.url == PokemonService.endpoint
+          ? http.Response(jsonEncode(list(1)), 200)
+          : http.Response('Not found', 404),
     );
-    addTearDown(service.dispose);
     await expectLater(
-      service.fetchPokemon(),
+      api.fetchPokemon(),
       throwsA(
         isA<PokemonApiException>().having(
           (e) => e.message,
           'message',
-          contains('internet'),
+          contains('404'),
         ),
       ),
     );
   });
 
-  test('timeouts become readable errors', () async {
-    final service = PokemonService(
-      client: MockClient((_) async => throw TimeoutException('timeout')),
+  test('network error has connection guidance', () async {
+    final api = service(
+      (_) async => throw http.ClientException('Connection refused'),
     );
-    addTearDown(service.dispose);
     await expectLater(
-      service.fetchPokemon(),
+      api.fetchPokemon(),
+      throwsA(
+        isA<PokemonApiException>().having(
+          (e) => e.message,
+          'message',
+          contains('internet connection'),
+        ),
+      ),
+    );
+  });
+
+  test('timeout has retry guidance', () async {
+    final api = service((_) async {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      return http.Response('{"results":[]}', 200);
+    }, timeout: const Duration(milliseconds: 1));
+    await expectLater(
+      api.fetchPokemon(),
       throwsA(
         isA<PokemonApiException>().having(
           (e) => e.message,
@@ -128,6 +181,89 @@ void main() {
           contains('timed out'),
         ),
       ),
+    );
+  });
+
+  for (final body in [
+    'not-json',
+    '[]',
+    '{}',
+    '{"results":[null]}',
+    '{"results":[{"name":"bad","url":"bad"}]}',
+  ]) {
+    test('malformed list rejected: $body', () async {
+      final api = service((_) async => http.Response(body, 200));
+      await expectLater(
+        api.fetchPokemon(),
+        throwsA(isA<PokemonApiException>()),
+      );
+    });
+  }
+
+  test(
+    'missing types, mismatched IDs, and malformed stats are rejected',
+    () async {
+      for (final broken in [
+        {...detail(1), 'types': []},
+        {
+          ...detail(1),
+          'types': [
+            {'type': {}},
+          ],
+        },
+        detail(2),
+        {
+          ...detail(1),
+          'stats': [
+            {
+              'base_stat': 'bad',
+              'stat': {'name': 'hp'},
+            },
+          ],
+        },
+        {...detail(1), 'height': -1},
+      ]) {
+        final api = service(
+          (r) async => http.Response(
+            jsonEncode(r.url == PokemonService.endpoint ? list(1) : broken),
+            200,
+          ),
+        );
+        await expectLater(
+          api.fetchPokemon(),
+          throwsA(isA<PokemonApiException>()),
+        );
+      }
+    },
+  );
+
+  test('duplicate IDs are rejected', () async {
+    final entries = list(1)['results'] as List;
+    final api = service(
+      (_) async => http.Response(
+        jsonEncode({
+          'results': [...entries, ...entries],
+        }),
+        200,
+      ),
+    );
+    await expectLater(api.fetchPokemon(), throwsA(isA<PokemonApiException>()));
+  });
+
+  test('model preserves formatting and validates list IDs', () {
+    final pokemon = Pokemon.fromListJson({
+      'name': 'mr-mime',
+      'url': 'https://pokeapi.co/api/v2/pokemon/122/',
+    });
+    expect(pokemon.displayName, 'Mr Mime');
+    expect(pokemon.displayId, '#122');
+    expect(
+      () => Pokemon.fromListJson({'name': 'invalid', 'url': '/pokemon/0/'}),
+      throwsFormatException,
+    );
+    expect(
+      () => Pokemon.fromListJson({'name': '', 'url': '/pokemon/1/'}),
+      throwsFormatException,
     );
   });
 }

@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local verification artifacts and private Claude handoff notes
+/artifacts/
+/CLAUDE-PROJECT-SUMMARY.md
