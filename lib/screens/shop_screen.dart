@@ -7,6 +7,7 @@ import '../state/shop_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/bag_sheet.dart';
 import '../widgets/filter_panel.dart';
+import '../widgets/filter_sidebar.dart';
 import '../widgets/pagination_bar.dart';
 import '../widgets/product_card.dart';
 import '../widgets/product_form.dart';
@@ -23,6 +24,7 @@ class ShopScreen extends ConsumerStatefulWidget {
 class _ShopScreenState extends ConsumerState<ShopScreen> {
   final _scroll = ScrollController();
   final _resultsKey = GlobalKey();
+  bool _panelOpen = true;
 
   @override
   void dispose() {
@@ -115,7 +117,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 40, 16, 32),
               child: Text(
-                'FACET STUDIO STORE — CS ELECTIVE 2 · SUPABASE × FLUTTER',
+                'FACET HOME APPLIANCES — CS ELECTIVE 2 · SUPABASE × FLUTTER',
                 textAlign: TextAlign.center,
                 style: monoLabel(size: 10),
               ),
@@ -164,11 +166,11 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: width < 480
-                ? IconButton.filled(tooltip: 'New object', onPressed: _createProduct, icon: const Icon(Icons.add_rounded))
+                ? IconButton.filled(tooltip: 'New appliance', onPressed: _createProduct, icon: const Icon(Icons.add_rounded))
                 : FilledButton.icon(
                     onPressed: _createProduct,
                     icon: const Icon(Icons.add_rounded, size: 18),
-                    label: const Text('New object'),
+                    label: const Text('New appliance'),
                     style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12)),
                   ),
           ),
@@ -178,14 +180,10 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
           ? Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SizedBox(
-                  width: 310,
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-                    child: const FilterPanel(),
-                  ),
+                FilterSidebar(
+                  open: _panelOpen,
+                  onToggle: () => setState(() => _panelOpen = !_panelOpen),
                 ),
-                const VerticalDivider(width: 1),
                 Expanded(child: content),
               ],
             )
@@ -247,9 +245,9 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
             body: state.error != null
                 ? describeError(state.error!)
                 : state.filter.isActive
-                    ? 'No objects match these filters. Widen the price range or reset the filters.'
-                    : 'The products table is empty. Run supabase/seed.sql, or add your first object.',
-            actionLabel: state.error != null ? 'Try again' : (state.filter.isActive ? 'Reset filters' : 'New object'),
+                    ? 'No appliances match these filters. Widen the price range or reset the filters.'
+                    : 'The products table is empty. Run supabase/seed.sql, or add your first appliance.',
+            actionLabel: state.error != null ? 'Try again' : (state.filter.isActive ? 'Reset filters' : 'New appliance'),
             onAction: state.error != null
                 ? () => ref.read(shopControllerProvider.notifier).refresh()
                 : state.filter.isActive

@@ -4,7 +4,8 @@ import '../theme/app_theme.dart';
 
 /// A card that leans toward the pointer in 3D perspective, with a moving
 /// glare highlight. [builder] receives the tilt (-1..1 per axis) so content
-/// can add its own parallax on top.
+/// can add parallax, and whether the card is hovered (or pressed on touch)
+/// so content can play its own hover animation.
 class TiltCard extends StatefulWidget {
   const TiltCard({
     super.key,
@@ -14,7 +15,7 @@ class TiltCard extends StatefulWidget {
     this.radius = 22,
   });
 
-  final Widget Function(BuildContext context, Offset tilt) builder;
+  final Widget Function(BuildContext context, Offset tilt, bool active) builder;
   final VoidCallback? onTap;
   final double maxAngle;
   final double radius;
@@ -90,7 +91,7 @@ class _TiltCardState extends State<TiltCard> {
                         child: Stack(
                           fit: StackFit.passthrough,
                           children: [
-                            widget.builder(context, tilt),
+                            widget.builder(context, tilt, _hovered || _pressed),
                             Positioned.fill(
                               child: IgnorePointer(
                                 child: AnimatedOpacity(

@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../models/product.dart';
 import '../theme/app_theme.dart';
-import '../three_d/shapes.dart';
-import '../three_d/spinning_mesh.dart';
+import '../three_d/appliance_view.dart';
+import '../three_d/appliances.dart';
 
-/// Opening "stage": oversized headline beside one large object the visitor
-/// can grab and spin — the single-hero-object pattern from 3D commerce sites.
+/// Opening "stage": oversized headline beside one large appliance the
+/// visitor can grab and spin — the single-hero-product pattern from 3D
+/// commerce sites. Hovering it runs its animation like the grid cards.
 class ShopHero extends StatelessWidget {
   const ShopHero({
     super.key,
@@ -23,7 +24,7 @@ class ShopHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final compact = width < 760;
-    final headline = compact ? 50.0 : 84.0;
+    final headline = compact ? 48.0 : 80.0;
 
     final copy = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -33,17 +34,17 @@ class ShopHero extends StatelessWidget {
           children: [
             Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.accent, shape: BoxShape.circle)),
             const SizedBox(width: 10),
-            Text('COLLECTION 03 — OBJECTS IN DEPTH', style: monoLabel(color: AppColors.text)),
+            Flexible(child: Text('HOME APPLIANCES — RENDERED IN 3D', style: monoLabel(color: AppColors.text))),
           ],
         ),
         const SizedBox(height: 18),
-        Text('Objects\nwith depth.', style: displayStyle(headline)),
+        Text('Appliances,\nin depth.', style: displayStyle(headline)),
         const SizedBox(height: 18),
         ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
+          constraints: const BoxConstraints(maxWidth: 440),
           child: const Text(
-            'Sculptural lamps, speakers and desk pieces — every one rendered live in 3D. '
-            'Grab the torus and give it a spin.',
+            'Fridges, washers, fans and kitchen helpers, each one built in live 3D. '
+            'Hover a product to see it work: doors open, drums spin, toast pops.',
             style: TextStyle(color: AppColors.muted, fontSize: 15, height: 1.5),
           ),
         ),
@@ -52,7 +53,7 @@ class ShopHero extends StatelessWidget {
           spacing: 10,
           runSpacing: 10,
           children: [
-            _Stat(label: filtered ? 'MATCHING' : 'OBJECTS', value: '$total'),
+            _Stat(label: filtered ? 'MATCHING' : 'APPLIANCES', value: '$total'),
             if (priceLabel != null) _Stat(label: 'PRICE RANGE', value: priceLabel!),
           ],
         ),
@@ -72,12 +73,13 @@ class ShopHero extends StatelessWidget {
           ),
         ),
         const Positioned.fill(
-          child: SpinningMesh(
-            shape: ShapeKind.torus,
-            color: AppColors.accent,
+          child: ApplianceView(
+            kind: ApplianceKind.fan,
+            color: Color(0xFFF2F2F2),
             detail: MeshDetail.high,
             interactive: true,
-            zoom: 1.15,
+            activateOnHover: true,
+            zoom: 1.1,
             speed: 0.3,
           ),
         ),
@@ -88,7 +90,7 @@ class ShopHero extends StatelessWidget {
             children: [
               const Icon(Icons.pan_tool_alt_outlined, size: 14, color: AppColors.muted),
               const SizedBox(width: 6),
-              Text('DRAG TO ROTATE', style: monoLabel(size: 10)),
+              Text('HOVER · DRAG TO ROTATE', style: monoLabel(size: 10)),
             ],
           ),
         ),

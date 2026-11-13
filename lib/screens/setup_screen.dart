@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
-import '../three_d/shapes.dart';
-import '../three_d/spinning_mesh.dart';
+import '../three_d/appliance_view.dart';
+import '../three_d/appliances.dart';
 
 /// Shown when the app was started without Supabase keys.
 class SetupScreen extends StatelessWidget {
@@ -26,13 +26,13 @@ class SetupScreen extends StatelessWidget {
               children: [
                 const SizedBox(
                   height: 180,
-                  child: SpinningMesh(shape: ShapeKind.gem, color: AppColors.accent, detail: MeshDetail.high, interactive: true),
+                  child: ApplianceView(kind: ApplianceKind.fridge, color: AppColors.accent, detail: MeshDetail.high, interactive: true, activateOnHover: true),
                 ),
                 const SizedBox(height: 12),
                 Text('Connect Supabase', style: displayStyle(44)),
                 const SizedBox(height: 12),
                 const Text(
-                  'FACET reads its catalogue from Supabase, and no project keys were found at build time.',
+                  'FACET reads its appliance catalogue from Supabase, and no project keys were found at build time.',
                   style: TextStyle(color: AppColors.muted, height: 1.5),
                 ),
                 const SizedBox(height: 24),

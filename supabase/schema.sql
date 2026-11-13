@@ -1,4 +1,4 @@
--- FACET store: products table for the Supabase-Flutter activity.
+-- FACET appliance store: products table for the Supabase-Flutter activity.
 -- Run this once in Supabase Dashboard -> SQL Editor, then run seed.sql.
 
 create table if not exists public.products (
@@ -8,9 +8,12 @@ create table if not exists public.products (
   price       numeric(10,2) not null check (price >= 0),
   category    text          not null check (char_length(category) between 1 and 40),
   stock       integer       not null default 0 check (stock >= 0),
-  shape       text          not null default 'cube'
-              check (shape in ('cube', 'sphere', 'torus', 'cylinder', 'cone', 'gem')),
-  color       text          not null default '#C8FF2E' check (color ~ '^#[0-9A-Fa-f]{6}$'),
+  -- Which 3D appliance model the app draws for this product.
+  model       text          not null default 'fridge'
+              check (model in ('fridge', 'washer', 'microwave', 'tv', 'fan', 'aircon',
+                               'rice_cooker', 'blender', 'air_fryer', 'toaster', 'kettle',
+                               'robot_vacuum')),
+  color       text          not null default '#F2F2F2' check (color ~ '^#[0-9A-Fa-f]{6}$'),
   created_at  timestamptz   not null default now()
 );
 

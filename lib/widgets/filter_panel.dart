@@ -19,7 +19,14 @@ class FilterPanel extends ConsumerStatefulWidget {
 }
 
 class _FilterPanelState extends ConsumerState<FilterPanel> {
-  static const _step = 50.0;
+  /// Slider step that gives roughly 100 stops across the catalogue's range
+  /// (₱50 for cheap items, ₱500 for appliances up to ₱55k).
+  static double _stepFor(double span) {
+    for (final s in const [50.0, 100.0, 250.0, 500.0, 1000.0, 2500.0]) {
+      if (span / s <= 120) return s;
+    }
+    return 5000;
+  }
 
   late final TextEditingController _search;
   Timer? _debounce;
@@ -64,7 +71,7 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
           onChanged: _onSearchChanged,
           textInputAction: TextInputAction.search,
           decoration: InputDecoration(
-            hintText: 'Find an object…',
+            hintText: 'Find an appliance…',
             prefixIcon: const Icon(Icons.search_rounded, color: AppColors.muted),
             suffixIcon: _search.text.isEmpty
                 ? null
@@ -130,8 +137,9 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
     final bounds = state.bounds;
     if (bounds == null) return [_label('PRICE'), const Text('—')];
 
-    final min = (bounds.min / _step).floorToDouble() * _step;
-    final max = math.max(min + _step, (bounds.max / _step).ceilToDouble() * _step);
+    final step = _stepFor(bounds.max - bounds.min);
+    final min = (bounds.min / step).floorToDouble() * step;
+    final max = math.max(min + step, (bounds.max / step).ceilToDouble() * step);
     final filter = state.filter;
     final values = _dragValues ??
         RangeValues(
@@ -160,7 +168,7 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
         values: values,
         min: min,
         max: max,
-        divisions: ((max - min) / _step).round(),
+        divisions: ((max - min) / step).round(),
         labels: RangeLabels(formatPeso(values.start), formatPeso(values.end)),
         onChanged: (v) => setState(() => _dragValues = v),
         onChangeEnd: (v) {
