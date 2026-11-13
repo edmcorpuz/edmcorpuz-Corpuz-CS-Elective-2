@@ -24,7 +24,7 @@ class FacetApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'FACET — 3D Object Store',
+      title: 'FACET — 3D Appliance Store',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       home: Env.isConfigured ? const ShopScreen() : const SetupScreen(),

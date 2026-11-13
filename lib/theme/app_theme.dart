@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// "Dark studio" palette: products are the only saturated color on screen,
-/// lit like objects on a photo stage. One acid-lime accent for actions.
+/// lit like appliances on a photo stage. One acid-lime accent for actions.
 class AppColors {
   AppColors._();
 

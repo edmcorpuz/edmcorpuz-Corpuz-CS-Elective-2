@@ -6,12 +6,13 @@ import '../models/product.dart';
 import '../state/bag_controller.dart';
 import '../state/shop_controller.dart';
 import '../theme/app_theme.dart';
-import '../three_d/shapes.dart';
-import '../three_d/spinning_mesh.dart';
+import '../three_d/appliance_view.dart';
+import '../three_d/appliances.dart';
 
+/// Appliance finishes: white, silver, graphite, then retro colors.
 const kSwatches = [
-  '#C8FF2E', '#FFB23F', '#FF6A3D', '#FF4F81', '#FF8FB1', '#A78BFA',
-  '#6E7BFF', '#5CE1E6', '#7CF5D4', '#B5E48C', '#E7C9A9', '#F2EDE4',
+  '#F2F2F2', '#C9CDD3', '#4A4F5A', '#3A3D45', '#A8E6CF', '#9AD1FF',
+  '#5CE1E6', '#C3B1E1', '#FF8A65', '#E5484D', '#FFE08A', '#F3E6C8', '#C8FF2E',
 ];
 
 /// Opens the create/edit form (dialog on wide screens, sheet on phones).
@@ -53,7 +54,7 @@ class _ProductFormState extends ConsumerState<ProductForm> {
   late final TextEditingController _price;
   late final TextEditingController _stock;
   late final TextEditingController _category;
-  late ShapeKind _shape;
+  late ApplianceKind _kind;
   late String _color;
   bool _saving = false;
   String? _error;
@@ -68,8 +69,8 @@ class _ProductFormState extends ConsumerState<ProductForm> {
     _description = TextEditingController(text: p?.description ?? '');
     _price = TextEditingController(text: p == null ? '' : _plain(p.price));
     _stock = TextEditingController(text: p == null ? '10' : '${p.stock}');
-    _category = TextEditingController(text: p?.category ?? '');
-    _shape = p?.shape ?? ShapeKind.cube;
+    _category = TextEditingController(text: p?.category ?? ApplianceKind.fridge.category);
+    _kind = p?.kind ?? ApplianceKind.fridge;
     _color = (p?.colorHex ?? kSwatches.first).toUpperCase();
   }
 
@@ -97,7 +98,7 @@ class _ProductFormState extends ConsumerState<ProductForm> {
       price: double.parse(_price.text.trim()),
       category: _category.text,
       stock: int.parse(_stock.text.trim()),
-      shape: _shape,
+      kind: _kind,
       colorHex: _color,
     );
     final controller = ref.read(shopControllerProvider.notifier);
@@ -132,18 +133,19 @@ class _ProductFormState extends ConsumerState<ProductForm> {
       child: Stack(
         children: [
           Positioned.fill(
-            child: SpinningMesh(
-              key: ValueKey(_shape),
-              shape: _shape,
+            child: ApplianceView(
+              key: ValueKey(_kind),
+              kind: _kind,
               color: colorFromHex(_color),
               detail: MeshDetail.high,
               interactive: true,
+              activateOnHover: true,
             ),
           ),
           Positioned(
             left: 14,
             bottom: 12,
-            child: Text('LIVE PREVIEW · DRAG TO ROTATE', style: monoLabel(size: 9.5)),
+            child: Text('LIVE PREVIEW · HOVER OR DRAG', style: monoLabel(size: 9.5)),
           ),
         ],
       ),
@@ -217,17 +219,23 @@ class _ProductFormState extends ConsumerState<ProductForm> {
             maxLines: 4,
           ),
           const SizedBox(height: 18),
-          Text('SHAPE', style: monoLabel()),
+          Text('APPLIANCE TYPE (3D MODEL)', style: monoLabel()),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final s in ShapeKind.values)
+              for (final k in ApplianceKind.values)
                 ChoiceChip(
-                  label: Text(s.label),
-                  selected: _shape == s,
-                  onSelected: (_) => setState(() => _shape = s),
+                  label: Text(k.label),
+                  selected: _kind == k,
+                  onSelected: (_) => setState(() {
+                    // Keep the category in step with the type unless the
+                    // user typed their own.
+                    final c = _category.text.trim();
+                    if (c.isEmpty || c == _kind.category) _category.text = k.category;
+                    _kind = k;
+                  }),
                 ),
             ],
           ),
@@ -259,12 +267,12 @@ class _ProductFormState extends ConsumerState<ProductForm> {
           onPressed: _saving ? null : _save,
           child: _saving
               ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-              : Text(_editing ? 'Save changes' : 'Add product'),
+              : Text(_editing ? 'Save changes' : 'Add appliance'),
         ),
       ],
     );
 
-    final title = Text(_editing ? 'Edit object' : 'New object', style: displayStyle(30));
+    final title = Text(_editing ? 'Edit appliance' : 'New appliance', style: displayStyle(30));
 
     if (wide) {
       return Padding(

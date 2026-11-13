@@ -4,7 +4,7 @@ import 'package:unang_flutter_project/data/product_repository.dart';
 import 'package:unang_flutter_project/models/product.dart';
 import 'package:unang_flutter_project/state/shop_controller.dart';
 import 'package:unang_flutter_project/state/shop_filter.dart';
-import 'package:unang_flutter_project/three_d/shapes.dart';
+import 'package:unang_flutter_project/three_d/appliances.dart';
 
 /// In-memory stand-in for Supabase that applies the same filter/range rules.
 class FakeRepository implements ProductRepository {
@@ -18,7 +18,7 @@ class FakeRepository implements ProductRepository {
               price: i * 100.0,
               category: i.isEven ? 'Even' : 'Odd',
               stock: 5,
-              shape: ShapeKind.cube,
+              kind: ApplianceKind.fridge,
               colorHex: '#C8FF2E',
             ),
         ];

@@ -1,6 +1,6 @@
 import 'package:flutter/painting.dart';
 
-import '../three_d/shapes.dart';
+import '../three_d/appliances.dart';
 
 /// A row of the `products` table in Supabase.
 class Product {
@@ -11,7 +11,7 @@ class Product {
     required this.price,
     required this.category,
     required this.stock,
-    required this.shape,
+    required this.kind,
     required this.colorHex,
     this.createdAt,
   });
@@ -22,7 +22,7 @@ class Product {
   final double price;
   final String category;
   final int stock;
-  final ShapeKind shape;
+  final ApplianceKind kind;
   final String colorHex;
   final DateTime? createdAt;
 
@@ -37,8 +37,8 @@ class Product {
         price: (map['price'] as num).toDouble(),
         category: map['category'] as String,
         stock: (map['stock'] as num?)?.toInt() ?? 0,
-        shape: ShapeKind.fromName(map['shape'] as String?),
-        colorHex: (map['color'] as String?) ?? '#C8FF2E',
+        kind: ApplianceKind.fromDb(map['model'] as String?),
+        colorHex: (map['color'] as String?) ?? '#F2F2F2',
         createdAt: map['created_at'] == null
             ? null
             : DateTime.tryParse(map['created_at'] as String),
@@ -51,7 +51,7 @@ class Product {
         'price': price,
         'category': category.trim(),
         'stock': stock,
-        'shape': shape.name,
+        'model': kind.dbName,
         'color': colorHex.toUpperCase(),
       };
 
@@ -62,7 +62,7 @@ class Product {
     double? price,
     String? category,
     int? stock,
-    ShapeKind? shape,
+    ApplianceKind? kind,
     String? colorHex,
   }) =>
       Product(
@@ -72,7 +72,7 @@ class Product {
         price: price ?? this.price,
         category: category ?? this.category,
         stock: stock ?? this.stock,
-        shape: shape ?? this.shape,
+        kind: kind ?? this.kind,
         colorHex: colorHex ?? this.colorHex,
         createdAt: createdAt,
       );

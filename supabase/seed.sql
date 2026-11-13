@@ -1,33 +1,33 @@
--- 24 sample products (3 pages of 8) spread from ₱249 to ₱18,990 so the
--- price slider and pagination have something to work with.
+-- 24 sample appliances (3 pages of 8) from ₱1,190 to ₱54,990 so the price
+-- slider and pagination have something to work with.
 -- Safe to re-run: it only inserts when the table is empty.
 
-insert into public.products (name, description, price, category, stock, shape, color, created_at)
-select v.name, v.description, v.price, v.category, v.stock, v.shape, v.color, now() - (v.age || ' hours')::interval
+insert into public.products (name, description, price, category, stock, model, color, created_at)
+select v.name, v.description, v.price, v.category, v.stock, v.model, v.color, now() - (v.age || ' hours')::interval
 from (values
-  ('Halo Ring Lamp',       'A floating ring of warm light. Dimmable, USB-C powered, made for bedside shelves.', 4890.00, 'Lighting',  12, 'torus',    '#FFB23F',  1),
-  ('Orb Desk Light',       'Hand-blown opal glass sphere that glows like a small moon on your desk.',            2350.00, 'Lighting',   8, 'sphere',   '#F2EDE4',  2),
-  ('Beacon Floor Cone',    'A tall cone uplighter that throws a soft wash of light up the wall.',                8990.00, 'Lighting',   3, 'cone',     '#FF6A3D',  3),
-  ('Pillar Glow',          'Frosted acrylic column with a slow colour-fade mode.',                               3150.00, 'Lighting',  15, 'cylinder', '#9AD1FF',  4),
-  ('Monolith Speaker',     'A solid cube of sound: 60 W, Bluetooth 5.3, felt-wrapped sides.',                   12490.00, 'Audio',      5, 'cube',     '#6E7BFF',  5),
-  ('Pebble Earbuds',       'Smooth, pebble-shaped earbuds with 30 hours of battery in the case.',               3990.00, 'Audio',     20, 'sphere',   '#E9E4FF',  6),
-  ('Loop Headphone Stand', 'A weighted ring that holds your headphones and keeps cables tidy.',                 1290.00, 'Audio',     25, 'torus',    '#C8FF2E',  7),
-  ('Column Soundbar',      'Cylindrical soundbar with room-filling 360° audio.',                                18990.00, 'Audio',      2, 'cylinder', '#FF4F81',  8),
-  ('Prism Paperweight',    'Faceted crystal paperweight that throws rainbows across the room.',                  890.00, 'Decor',     30, 'gem',      '#7CF5D4',  9),
-  ('Cubo Planter',         'Matte ceramic cube planter with a hidden drainage tray.',                            1450.00, 'Decor',     18, 'cube',     '#E7C9A9', 10),
-  ('Donut Vase',           'Glazed ring vase for a single dramatic stem.',                                       1690.00, 'Decor',     10, 'torus',    '#FF8FB1', 11),
-  ('Spire Candle',         'Sculpted cone candle, 20-hour burn, unscented soy wax.',                              349.00, 'Decor',     40, 'cone',     '#FFE066', 12),
-  ('Block Charging Dock',  'One cube, three devices: phone, watch and earbuds.',                                 2790.00, 'Desk',      14, 'cube',     '#B8F2FF', 13),
-  ('Roll Pen Cup',         'Powder-coated steel tube for pens, brushes and rulers.',                              590.00, 'Desk',      35, 'cylinder', '#FF9F45', 14),
-  ('Facet Bookend',        'A heavy cut-glass bookend, sold as one.',                                            1190.00, 'Desk',      16, 'gem',      '#A78BFA', 15),
-  ('Dot Fidget Sphere',    'Satisfyingly heavy steel sphere to roll while you think.',                            249.00, 'Desk',      50, 'sphere',   '#5CE1E6', 16),
-  ('Zen Diffuser',         'Ultrasonic cone diffuser with a warm night-light ring.',                             2190.00, 'Wellness',  11, 'cone',     '#B5E48C', 17),
-  ('Orbit Massage Ball',   'Firm textured ball for back and foot release.',                                       690.00, 'Wellness',  28, 'sphere',   '#FF7A59', 18),
-  ('Calm Ring Timer',      'Twist the ring to start a silent focus or breathing timer.',                         1590.00, 'Wellness',   9, 'torus',    '#9BF6FF', 19),
-  ('Crystal Lamp',         'Salt-crystal gem lamp with a dimmable warm bulb.',                                   2990.00, 'Wellness',   0, 'gem',      '#FFC6FF', 20),
-  ('Drum Coffee Grinder',  'Burr grinder in a brushed drum body, 40 grind settings.',                            6450.00, 'Kitchen',    6, 'cylinder', '#D4A373', 21),
-  ('Cube Ice Mold',        'Makes four crystal-clear 5 cm ice cubes.',                                            299.00, 'Kitchen',   45, 'cube',     '#A0C4FF', 22),
-  ('Funnel Pour-Over',     'Ceramic cone dripper for a clean, bright cup.',                                      1350.00, 'Kitchen',   22, 'cone',     '#FDFFB6', 23),
-  ('Kettle Sphere',        'Gooseneck electric kettle with a round 1 L body.',                                   4250.00, 'Kitchen',    7, 'sphere',   '#FFADAD', 24)
-) as v(name, description, price, category, stock, shape, color, age)
+  ('Frost Two-Door Refrigerator',  '9 cu. ft. inverter fridge with a top freezer, LED interior light and glass shelves.',          28995.00, 'Refrigeration', 6,  'fridge',       '#EDEDED',  1),
+  ('Retro ''58 Refrigerator',      'Rounded retro styling in mint, 7 cu. ft., chrome handles and a quiet inverter compressor.',   45990.00, 'Refrigeration', 2,  'fridge',       '#A8E6CF',  2),
+  ('Aqua 8 kg Front-Load Washer',  '15 wash programs, steam hygiene cycle and a 1,200 rpm spin.',                                 21490.00, 'Laundry',       5,  'washer',       '#F2F2F2',  3),
+  ('Aqua 10 kg Inverter Washer',   'Big-family capacity with direct-drive inverter motor and quick 15-minute wash.',              32500.00, 'Laundry',       3,  'washer',       '#4A4F5A',  4),
+  ('Glow 25 L Microwave',          '900 W microwave with 8 auto-cook menus and a child lock.',                                     4995.00, 'Kitchen',      14,  'microwave',    '#C9CDD3',  5),
+  ('Glow Retro Microwave',         'Coral retro microwave with a chrome dial and defrost-by-weight.',                             7490.00, 'Kitchen',       8,  'microwave',    '#FF8A65',  6),
+  ('Puff 1.8 L Rice Cooker',       'Cooks 10 cups, keep-warm for 12 hours, non-stick inner pot.',                                 1895.00, 'Kitchen',      25,  'rice_cooker',  '#F3E6C8',  7),
+  ('Puff IH Rice Cooker',          'Induction heating for evenly cooked rice, with brown-rice and congee modes.',                 4250.00, 'Kitchen',       9,  'rice_cooker',  '#E5484D',  8),
+  ('Whirl Pro Blender',            '1,200 W blender with a 1.5 L jar that crushes ice for shakes in seconds.',                    3490.00, 'Kitchen',      12,  'blender',      '#C8FF2E',  9),
+  ('Whirl Mini Blender',           'Compact 600 W blender for smoothies and sauces.',                                             1890.00, 'Kitchen',      20,  'blender',      '#C3B1E1', 10),
+  ('Crisp 4 L Air Fryer',          'Crispy fries with 85% less oil; 8 presets and a dishwasher-safe basket.',                     3295.00, 'Kitchen',      18,  'air_fryer',    '#4A4F5A', 11),
+  ('Crisp Duo 7 L Air Fryer',      'Family-size basket with a viewing light and shake reminder.',                                 6495.00, 'Kitchen',       7,  'air_fryer',    '#F2F2F2', 12),
+  ('Pop 2-Slice Toaster',          'Six browning levels, bagel and defrost buttons, removable crumb tray.',                       1290.00, 'Kitchen',      22,  'toaster',      '#FFE08A', 13),
+  ('Pop 4-Slice Toaster',          'Brushed steel toaster with independent slots for the whole family.',                          2450.00, 'Kitchen',      10,  'toaster',      '#C9CDD3', 14),
+  ('Boil 1.7 L Kettle',            'Boils a full kettle in about four minutes, with an LED ring that glows while heating.',       1190.00, 'Kitchen',      30,  'kettle',       '#9AD1FF', 15),
+  ('Boil Temp-Control Kettle',     'Five temperature presets for coffee and tea, with keep-warm.',                                2190.00, 'Kitchen',       0,  'kettle',       '#E7C9A9', 16),
+  ('Breeze 16" Stand Fan',         'Three speeds, wide oscillation and a 7.5-hour timer.',                                        1495.00, 'Cooling',      40,  'fan',          '#F2F2F2', 17),
+  ('Breeze Turbo Stand Fan',       'DC motor with 12 quiet speeds and a remote control.',                                         2990.00, 'Cooling',      15,  'fan',          '#5CE1E6', 18),
+  ('Arctic 1 HP Split Aircon',     'Inverter split-type for rooms up to 15 m², with a sleep mode and an auto-swing flap.',       24990.00, 'Cooling',       4,  'aircon',       '#F5F5F5', 19),
+  ('Arctic 2 HP Inverter Aircon',  'Cools living rooms up to 30 m², with Wi-Fi control and a self-clean cycle.',                 38500.00, 'Cooling',       2,  'aircon',       '#DDE3EA', 20),
+  ('Vivid 43" Smart TV',           'Full HD smart TV with built-in streaming apps and a slim bezel.',                            15990.00, 'Entertainment', 11, 'tv',           '#3A3D45', 21),
+  ('Vivid 65" 4K Smart TV',        '4K HDR panel, Dolby Audio and voice remote.',                                                54990.00, 'Entertainment', 3,  'tv',           '#C9CDD3', 22),
+  ('Roam S1 Robot Vacuum',         'Gyro navigation, 120-minute runtime and app scheduling.',                                     9990.00, 'Cleaning',     13,  'robot_vacuum', '#F2F2F2', 23),
+  ('Roam S2 Max Robot Vacuum',     'Lidar mapping, vacuum and mop in one, with auto-empty dock support.',                        19990.00, 'Cleaning',      6,  'robot_vacuum', '#4A4F5A', 24)
+) as v(name, description, price, category, stock, model, color, age)
 where not exists (select 1 from public.products);

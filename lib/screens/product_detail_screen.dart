@@ -5,8 +5,8 @@ import '../models/product.dart';
 import '../state/bag_controller.dart';
 import '../state/shop_controller.dart';
 import '../theme/app_theme.dart';
-import '../three_d/shapes.dart';
-import '../three_d/spinning_mesh.dart';
+import '../three_d/appliance_view.dart';
+import '../three_d/appliances.dart';
 import '../widgets/product_form.dart';
 
 /// Full-bleed 3D stage + details. Pops with a message after a delete.
@@ -22,6 +22,7 @@ class ProductDetailScreen extends ConsumerStatefulWidget {
 class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   late Product _product = widget.product;
   bool _deleting = false;
+  bool _demoOn = false;
 
   Future<void> _edit() async {
     final saved = await showProductForm(context, initial: _product);
@@ -80,26 +81,42 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         ),
         Positioned.fill(
           child: Hero(
-            tag: 'product-mesh-${p.id}',
-            child: SpinningMesh(
-              shape: p.shape,
+            tag: 'product-model-${p.id}',
+            child: ApplianceView(
+              kind: p.kind,
               color: p.color,
               detail: MeshDetail.high,
               interactive: true,
-              zoom: 1.05,
+              activateOnHover: true,
+              active: _demoOn,
+              zoom: 1.0,
               speed: 0.25,
             ),
           ),
         ),
         Positioned(
           left: 20,
-          bottom: 18,
+          bottom: 22,
           child: Row(
             children: [
               const Icon(Icons.threesixty_rounded, size: 16, color: AppColors.muted),
               const SizedBox(width: 8),
-              Text('DRAG TO ROTATE · ${p.shape.label.toUpperCase()}', style: monoLabel(size: 10)),
+              Text('HOVER OR DRAG · ${p.kind.label.toUpperCase()}', style: monoLabel(size: 10)),
             ],
+          ),
+        ),
+        Positioned(
+          right: 16,
+          bottom: 12,
+          child: FilledButton.tonalIcon(
+            onPressed: () => setState(() => _demoOn = !_demoOn),
+            style: FilledButton.styleFrom(
+              backgroundColor: _demoOn ? AppColors.accent : AppColors.surfaceHigh,
+              foregroundColor: _demoOn ? Colors.black : AppColors.text,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            icon: Icon(_demoOn ? Icons.stop_rounded : Icons.play_arrow_rounded, size: 18),
+            label: Text(_demoOn ? 'Stop' : p.kind.action),
           ),
         ),
       ],
@@ -117,14 +134,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         if (p.description.isNotEmpty)
           Text(p.description, style: const TextStyle(color: AppColors.muted, fontSize: 15, height: 1.6)),
         const SizedBox(height: 26),
-        _SpecRow(label: 'FORM', value: p.shape.label),
+        _SpecRow(label: 'TYPE', value: p.kind.label),
         _SpecRow(
           label: 'FINISH',
           value: p.colorHex.toUpperCase(),
           leading: Container(width: 12, height: 12, decoration: BoxDecoration(color: p.color, shape: BoxShape.circle)),
         ),
         _SpecRow(label: 'IN STOCK', value: p.stock == 0 ? 'Sold out' : '${p.stock} pcs'),
-        _SpecRow(label: 'SKU', value: 'FCT-${(p.id ?? 0).toString().padLeft(4, '0')}'),
+        _SpecRow(label: 'SKU', value: 'FCT-${p.kind.dbName.toUpperCase()}-${(p.id ?? 0).toString().padLeft(4, '0')}'),
         const SizedBox(height: 26),
         FilledButton.icon(
           onPressed: p.inStock && inBag < p.stock ? () => ref.read(bagProvider.notifier).add(p) : null,

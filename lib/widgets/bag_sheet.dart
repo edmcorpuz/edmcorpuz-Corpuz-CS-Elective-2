@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/product.dart';
 import '../state/bag_controller.dart';
 import '../theme/app_theme.dart';
-import '../three_d/spinning_mesh.dart';
+import '../three_d/appliance_view.dart';
 
 void showBag(BuildContext context) {
   showModalBottomSheet<void>(
@@ -38,7 +38,7 @@ class BagSheet extends ConsumerWidget {
             if (lines.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 40),
-                child: Text('Nothing here yet. Tap + on an object to add it.',
+                child: Text('Nothing here yet. Tap + on an appliance to add it.',
                     textAlign: TextAlign.center, style: TextStyle(color: AppColors.muted)),
               )
             else
@@ -59,7 +59,7 @@ class BagSheet extends ConsumerWidget {
                             color: AppColors.surfaceHigh,
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          child: SpinningMesh(shape: p.shape, color: p.color, showShadow: false, zoom: 1.1),
+                          child: ApplianceView(kind: p.kind, color: p.color, showShadow: false, zoom: 1.05),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
