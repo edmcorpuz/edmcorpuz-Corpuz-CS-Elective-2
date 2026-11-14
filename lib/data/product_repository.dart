@@ -83,8 +83,15 @@ class SupabaseProductRepository implements ProductRepository {
 
   @override
   Future<PriceBounds?> fetchPriceBounds() async {
+    // postgrest-dart's order() defaults to DESCENDING, so the cheapest-row
+    // query must say ascending: true explicitly.
     final results = await Future.wait([
-      _client.from(table).select('price').order('price').limit(1).maybeSingle(),
+      _client
+          .from(table)
+          .select('price')
+          .order('price', ascending: true)
+          .limit(1)
+          .maybeSingle(),
       _client
           .from(table)
           .select('price')
