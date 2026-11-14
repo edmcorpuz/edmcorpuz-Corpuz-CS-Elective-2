@@ -3,6 +3,11 @@
 **CS Elective 2 · Supabase-Flutter Activity: Price Filter + Pagination**
 Branch: `backend-filter-pagination`
 
+### ▶ [Open the live website](https://edmcorpuz.github.io/edmcorpuz-Corpuz-CS-Elective-2/)
+
+`https://edmcorpuz.github.io/edmcorpuz-Corpuz-CS-Elective-2/`: the app
+running in your browser against the real Supabase database. Nothing to install.
+
 FACET is a Flutter home-appliance store backed by Supabase. Every product is
 a live 3D appliance (fridge, washer, microwave, TV, fan, aircon, rice cooker,
 blender, air fryer, toaster, kettle or robot vacuum). Each one is drawn by a
@@ -74,6 +79,20 @@ ideas for what to build next.
 
 If the keys are missing, the app opens a setup screen instead of crashing.
 
+## Updating the live website
+
+The live site is hosted on GitHub Pages from the `gh-pages` branch, which
+holds only the built web files. After changing the code, rebuild and publish
+it with one command (PowerShell, from the project folder):
+
+```powershell
+./tool/deploy_web.ps1
+```
+
+The script builds the app with your `env.json` keys and the right base path
+for GitHub Pages, then replaces the `gh-pages` branch with the new build. The
+site updates about a minute later.
+
 ## Project structure
 
 ```
@@ -95,6 +114,8 @@ lib/
 supabase/
   schema.sql                      table (with `model` column), indexes, RLS
   seed.sql                        24 sample appliances
+tool/
+  deploy_web.ps1                  build + publish the live site to GitHub Pages
 ```
 
 ## Tests
