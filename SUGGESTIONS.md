@@ -30,17 +30,10 @@ site there's a note on what FACET already borrows and what to try next.
 
 ## Engineering suggestions
 
-1. **Lock down write access (most important).** `schema.sql` lets the public
-   `anon` role insert, update and delete, because the activity has no login.
-   Before using real data, add Supabase Auth and an `admins` table (or a
-   custom claim). Then limit insert, update and delete to admins, and keep
-   `select` public.
-   ```sql
-   create policy "Admins manage products" on public.products
-     for all to authenticated
-     using (exists (select 1 from admins a where a.user_id = auth.uid()))
-     with check (exists (select 1 from admins a where a.user_id = auth.uid()));
-   ```
+1. **Write access is locked down (done).** Browsing is public, and only
+   accounts in the `admins` table can add, edit or delete products (see
+   "Who can change products" in the README). Next step if more people help
+   run the store: give admins roles (for example, editors who can't delete).
 2. **Shareable URLs.** Your repo already has a `go_route` branch. Put the page
    and filters in the query string (`/shop?page=2&min=500&max=5000`) so links
    and the browser back button work on Flutter web.

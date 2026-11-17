@@ -22,20 +22,62 @@ create index if not exists products_price_idx      on public.products (price);
 create index if not exists products_category_idx   on public.products (category);
 create index if not exists products_created_at_idx on public.products (created_at desc, id desc);
 
--- Row Level Security.
--- This class project has no login screen, so the public (anon) role may
--- read AND add/edit/delete products. Fine for a demo; see SUGGESTIONS.md
--- before putting real data behind these keys.
+-- Admins: the only accounts allowed to add, edit or delete products.
+-- Create the account in Dashboard -> Authentication -> Users -> Add user,
+-- then list it here (see "Make an account an admin" at the end of this file).
+create table if not exists public.admins (
+  user_id    uuid        primary key references auth.users (id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+alter table public.admins enable row level security;
+
+-- Signed-in accounts may only check whether they themselves are an admin.
+-- Nobody can add admins through the API; that happens in the SQL editor.
+revoke all on public.admins from anon, authenticated;
+grant select on public.admins to authenticated;
+
+drop policy if exists "Accounts can see their own admin row" on public.admins;
+create policy "Accounts can see their own admin row" on public.admins
+  for select to authenticated using (user_id = (select auth.uid()));
+
+-- Row Level Security for products: everyone, signed in or not, can browse
+-- the catalogue, but only admins can change it.
 alter table public.products enable row level security;
 
-grant select, insert, update, delete on public.products to anon, authenticated;
+revoke all on public.products from anon, authenticated;
+grant select on public.products to anon;
+grant select, insert, update, delete on public.products to authenticated;
 
-drop policy if exists "Anyone can view products"   on public.products;
+-- Remove the open write policies from the first version of this file.
 drop policy if exists "Anyone can add products"    on public.products;
 drop policy if exists "Anyone can update products" on public.products;
 drop policy if exists "Anyone can delete products" on public.products;
 
-create policy "Anyone can view products"   on public.products for select to anon, authenticated using (true);
-create policy "Anyone can add products"    on public.products for insert to anon, authenticated with check (true);
-create policy "Anyone can update products" on public.products for update to anon, authenticated using (true) with check (true);
-create policy "Anyone can delete products" on public.products for delete to anon, authenticated using (true);
+drop policy if exists "Anyone can view products"   on public.products;
+drop policy if exists "Admins can add products"    on public.products;
+drop policy if exists "Admins can update products" on public.products;
+drop policy if exists "Admins can delete products" on public.products;
+
+create policy "Anyone can view products" on public.products
+  for select to anon, authenticated using (true);
+
+create policy "Admins can add products" on public.products
+  for insert to authenticated
+  with check (exists (select 1 from public.admins a where a.user_id = (select auth.uid())));
+
+create policy "Admins can update products" on public.products
+  for update to authenticated
+  using      (exists (select 1 from public.admins a where a.user_id = (select auth.uid())))
+  with check (exists (select 1 from public.admins a where a.user_id = (select auth.uid())));
+
+create policy "Admins can delete products" on public.products
+  for delete to authenticated
+  using (exists (select 1 from public.admins a where a.user_id = (select auth.uid())));
+
+-- Make an account an admin. Run this on its own, with the email of the
+-- account you created under Authentication -> Users:
+--
+--   insert into public.admins (user_id)
+--   select id from auth.users where email = 'you@example.com'
+--   on conflict do nothing;
