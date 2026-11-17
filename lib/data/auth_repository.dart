@@ -73,12 +73,20 @@ class SupabaseAuthRepository implements AuthRepository {
       return value is String && value.trim().isNotEmpty ? value.trim() : null;
     }
 
+    // Supabase joins a GitHub sign-in to an existing account with the same
+    // email, so one account can have several identities. Report the one
+    // used most recently, not the account's first provider.
+    final identities = [...?user.identities]
+      ..sort((a, b) => (b.lastSignInAt ?? '').compareTo(a.lastSignInAt ?? ''));
+
     return AccountUser(
       id: user.id,
       email: user.email,
       name: text('full_name') ?? text('name') ?? text('user_name'),
       avatarUrl: text('avatar_url'),
-      provider: (user.appMetadata['provider'] as String?) ?? 'email',
+      provider: identities.isNotEmpty
+          ? identities.first.provider
+          : (user.appMetadata['provider'] as String?) ?? 'email',
     );
   }
 
