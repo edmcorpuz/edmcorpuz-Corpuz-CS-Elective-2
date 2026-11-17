@@ -24,9 +24,11 @@ small renderer written in pure Dart, so you don't need any 3D model files.
 | Works on web and phones | Web returns to the same page (Supabase finishes the sign-in from the URL); Android and iOS return through the `io.supabase.facetshop://login-callback/` deep link registered in `AndroidManifest.xml` and `Info.plist` |
 | Signed-in state in the UI | Riverpod `AccountController` in [`lib/state/account_controller.dart`](lib/state/account_controller.dart): the top bar shows your GitHub photo and name, checkout asks visitors to sign in, and admins get the editing tools |
 
-A first-time GitHub sign-in creates the FACET account automatically. People
-who sign in with GitHub are shoppers; only accounts listed in the `admins`
-table can change products, whichever way they signed in.
+A first-time GitHub sign-in creates the FACET account automatically. If the
+GitHub account's email already has a FACET account, Supabase joins the two,
+so that person can use either sign-in and keeps the same account (and admin
+rights, if any). Only accounts listed in the `admins` table can change
+products, whichever way they signed in.
 
 ## Price filter + pagination activity
 
