@@ -138,7 +138,12 @@ class SupabaseProductRepository implements ProductRepository {
 
   @override
   Future<void> delete(int id) async {
-    await _client.from(table).delete().eq('id', id);
+    // Row Level Security makes a blocked delete match zero rows instead of
+    // failing, so ask for the deleted ids and treat "none" as an error.
+    final deleted = await _client.from(table).delete().eq('id', id).select('id');
+    if (deleted.isEmpty) {
+      throw const PostgrestException(message: 'No product was deleted', code: 'PGRST116');
+    }
   }
 
   /// Strips LIKE wildcards so a search for "50%" can't match everything.

@@ -7,6 +7,8 @@ Branch: `backend-filter-pagination`
 
 `https://edmcorpuz.github.io/edmcorpuz-Corpuz-CS-Elective-2/`: the app
 running in your browser against the real Supabase database. Nothing to install.
+Anyone can browse; adding, editing and deleting appliances need an
+**Admin sign in** (top right).
 
 FACET is a Flutter home-appliance store backed by Supabase. Every product is
 a live 3D appliance (fridge, washer, microwave, TV, fan, aircon, rice cooker,
@@ -21,7 +23,7 @@ small renderer written in pure Dart, so you don't need any 3D model files.
 | **Pagination**: 6–8 products per page | `kPageSize = 8` in [`lib/state/shop_controller.dart`](lib/state/shop_controller.dart) |
 | Pagination done with a **Supabase query** | `.range(from, to).count(CountOption.exact)`: Postgres returns only the 8 rows for the page plus the total count |
 | Handled on the frontend with **state management** | Riverpod `NotifierProvider` (`ShopController` / `ShopState`) holds the page, total, filters and loading/error state; the UI only renders that state |
-| Update / delete / filter from the class session | Edit and Delete on the product page, “New appliance” in the top bar, plus category, search and sort filters |
+| Update / delete / filter from the class session | Edit and Delete on the product page and “New appliance” in the top bar (shown after **Admin sign in**), plus category, search and sort filters |
 
 All filters run on the server and are combined in one query: search (`ilike`),
 category (`eq`), price range (`gte`/`lte`), sort (`order`) and page (`range`).
@@ -66,10 +68,20 @@ ideas for what to build next.
    run [`supabase/schema.sql`](supabase/schema.sql), then
    [`supabase/seed.sql`](supabase/seed.sql). This creates 24 appliances from
    ₱1,190 to ₱54,990, which is 3 pages.
-2. **Add your keys.** Copy `env.example.json` to `env.json`, then fill in the
+2. **Create your admin account.** In **Authentication → Users**, click
+   **Add user → Create new user**, enter your email and a password, and tick
+   **Auto Confirm User**. Then make it an admin in the SQL Editor:
+   ```sql
+   insert into public.admins (user_id)
+   select id from auth.users where email = 'you@example.com'
+   on conflict do nothing;
+   ```
+   Finally, in **Authentication → Sign In / Providers**, turn off
+   **Allow new users to sign up** so nobody else can create accounts.
+3. **Add your keys.** Copy `env.example.json` to `env.json`, then fill in the
    Project URL and publishable key from **Project Settings → API Keys**.
    `env.json` is git-ignored.
-3. **Run it.**
+4. **Run it.**
    ```bash
    flutter pub get
    flutter run --dart-define-from-file=env.json
@@ -78,6 +90,21 @@ ideas for what to build next.
    already pass `env.json`.
 
 If the keys are missing, the app opens a setup screen instead of crashing.
+
+## Who can change products
+
+The publishable key is built into the public website, so the database
+itself decides who may do what (Row Level Security in
+[`supabase/schema.sql`](supabase/schema.sql)):
+
+- **Visitors** (no account) can only read products.
+- **Admins** (accounts listed in the `admins` table) can add, edit and delete.
+- Any other signed-in account is signed straight back out, and the database
+  would reject its changes anyway.
+
+The app hides the add, edit and delete buttons until an admin signs in.
+Hiding the buttons is only for convenience: the database rules are what
+block everyone else.
 
 ## Updating the live website
 
@@ -100,8 +127,10 @@ lib/
   main.dart                       Supabase.initialize + ProviderScope
   config/env.dart                 keys from --dart-define-from-file
   data/product_repository.dart    all Supabase queries (filter, range, count, CRUD)
+  data/auth_repository.dart       admin sign-in + "is this account an admin?"
   models/product.dart             Product model, ₱ formatting
   state/shop_controller.dart      Riverpod: pagination + filter state
+  state/admin_controller.dart     Riverpod: who is signed in, admin or not
   state/shop_filter.dart          search / category / price / sort
   state/bag_controller.dart       in-memory shopping bag
   three_d/mesh.dart               vectors, mesh, MeshBuilder primitives
@@ -109,10 +138,10 @@ lib/
   three_d/appliance_painter.dart  the renderer
   three_d/appliance_view.dart     animated widget (sway, hover, drag)
   widgets/                        filter panel + collapsible sidebar, cards,
-                                  pagination bar, form, bag
+                                  pagination bar, form, bag, admin sign-in
   screens/                        shop, product detail, setup
 supabase/
-  schema.sql                      table (with `model` column), indexes, RLS
+  schema.sql                      products + admins tables, indexes, RLS
   seed.sql                        24 sample appliances
 tool/
   deploy_web.ps1                  build + publish the live site to GitHub Pages
@@ -128,4 +157,6 @@ The tests drive `ShopController` with an in-memory repository. They cover
 page size, next and last page, the price range, category plus search, and
 deleting the last item on a page. A second set checks that every 3D
 primitive's faces point outward, that all 12 appliance models build and fit
-on screen, and that the fridge door swings toward the viewer.
+on screen, and that the fridge door swings toward the viewer. A third set
+checks admin sign-in: admins unlock editing, wrong passwords and non-admin
+accounts are turned away, and signing out locks editing again.

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/product.dart';
+import '../state/admin_controller.dart';
 import '../state/bag_controller.dart';
 import '../state/shop_controller.dart';
 import '../theme/app_theme.dart';
@@ -12,6 +13,7 @@ import '../widgets/pagination_bar.dart';
 import '../widgets/product_card.dart';
 import '../widgets/product_form.dart';
 import '../widgets/shop_hero.dart';
+import '../widgets/sign_in_dialog.dart';
 import 'product_detail_screen.dart';
 
 class ShopScreen extends ConsumerStatefulWidget {
@@ -90,9 +92,80 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     }
   }
 
+  Future<void> _signIn() async {
+    final signedIn = await showSignInDialog(context);
+    if (signedIn == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Signed in as admin. You can now add, edit and delete appliances.')),
+      );
+    }
+  }
+
+  Future<void> _signOut() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(adminProvider.notifier).signOut();
+      messenger.showSnackBar(const SnackBar(content: Text('Signed out')));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(describeError(e))));
+    }
+  }
+
+  Widget _accountActions(AdminState admin, double width) {
+    if (!admin.isAdmin) {
+      return width < 480
+          ? IconButton(tooltip: 'Admin sign in', onPressed: _signIn, icon: const Icon(Icons.lock_outline_rounded))
+          : OutlinedButton.icon(
+              onPressed: _signIn,
+              icon: const Icon(Icons.lock_outline_rounded, size: 16),
+              label: const Text('Admin sign in'),
+              style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
+            );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PopupMenuButton<void>(
+          tooltip: 'Admin account',
+          icon: const Icon(Icons.admin_panel_settings_outlined, color: AppColors.accent),
+          itemBuilder: (_) => [
+            PopupMenuItem<void>(
+              enabled: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('SIGNED IN AS ADMIN', style: monoLabel(size: 9.5)),
+                  const SizedBox(height: 4),
+                  Text(admin.email ?? '', style: const TextStyle(color: AppColors.text)),
+                ],
+              ),
+            ),
+            const PopupMenuDivider(),
+            PopupMenuItem<void>(
+              onTap: _signOut,
+              child: const Row(
+                children: [Icon(Icons.logout_rounded, size: 18), SizedBox(width: 10), Text('Sign out')],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(width: 6),
+        width < 480
+            ? IconButton.filled(tooltip: 'New appliance', onPressed: _createProduct, icon: const Icon(Icons.add_rounded))
+            : FilledButton.icon(
+                onPressed: _createProduct,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('New appliance'),
+                style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12)),
+              ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(shopControllerProvider);
+    final admin = ref.watch(adminProvider);
     final bagCount = ref.watch(bagProvider.select((b) => b.values.fold(0, (s, l) => s + l.quantity)));
     final width = MediaQuery.sizeOf(context).width;
     final wide = width >= 1100;
@@ -112,7 +185,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
             ),
           ),
           SliverToBoxAdapter(child: _resultsHeader(state, wide)),
-          ..._body(state),
+          ..._body(state, isAdmin: admin.isAdmin),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 40, 16, 32),
@@ -165,14 +238,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
           const SizedBox(width: 6),
           Padding(
             padding: const EdgeInsets.only(right: 16),
-            child: width < 480
-                ? IconButton.filled(tooltip: 'New appliance', onPressed: _createProduct, icon: const Icon(Icons.add_rounded))
-                : FilledButton.icon(
-                    onPressed: _createProduct,
-                    icon: const Icon(Icons.add_rounded, size: 18),
-                    label: const Text('New appliance'),
-                    style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12)),
-                  ),
+            child: _accountActions(admin, width),
           ),
         ],
       ),
@@ -229,7 +295,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     );
   }
 
-  List<Widget> _body(ShopState state) {
+  List<Widget> _body(ShopState state, {required bool isAdmin}) {
     if (!state.loadedOnce) {
       return const [
         SliverToBoxAdapter(
@@ -246,13 +312,21 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                 ? describeError(state.error!)
                 : state.filter.isActive
                     ? 'No appliances match these filters. Widen the price range or reset the filters.'
-                    : 'The products table is empty. Run supabase/seed.sql, or add your first appliance.',
-            actionLabel: state.error != null ? 'Try again' : (state.filter.isActive ? 'Reset filters' : 'New appliance'),
+                    : isAdmin
+                        ? 'The products table is empty. Run supabase/seed.sql, or add your first appliance.'
+                        : 'The catalogue is empty right now. Check back soon.',
+            actionLabel: state.error != null
+                ? 'Try again'
+                : state.filter.isActive
+                    ? 'Reset filters'
+                    : (isAdmin ? 'New appliance' : 'Refresh'),
             onAction: state.error != null
                 ? () => ref.read(shopControllerProvider.notifier).refresh()
                 : state.filter.isActive
                     ? () => ref.read(shopControllerProvider.notifier).resetFilters()
-                    : _createProduct,
+                    : isAdmin
+                        ? _createProduct
+                        : () => ref.read(shopControllerProvider.notifier).refresh(),
           ),
         ),
       ];

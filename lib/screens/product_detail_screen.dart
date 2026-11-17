@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/product.dart';
+import '../state/admin_controller.dart';
 import '../state/bag_controller.dart';
 import '../state/shop_controller.dart';
 import '../theme/app_theme.dart';
@@ -65,6 +66,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   Widget build(BuildContext context) {
     final p = _product;
     final inBag = ref.watch(bagProvider.select((b) => b[p.id]?.quantity ?? 0));
+    final isAdmin = ref.watch(adminProvider.select((a) => a.isAdmin));
 
     final stage = Stack(
       children: [
@@ -148,32 +150,34 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           icon: const Icon(Icons.shopping_bag_outlined, size: 18),
           label: Text(inBag > 0 ? 'Add another ($inBag in bag)' : 'Add to bag'),
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _deleting ? null : _edit,
-                icon: const Icon(Icons.edit_outlined, size: 18),
-                label: const Text('Edit'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _deleting ? null : _delete,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.danger,
-                  side: BorderSide(color: AppColors.danger.withValues(alpha: 0.4)),
+        if (isAdmin) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _deleting ? null : _edit,
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: const Text('Edit'),
                 ),
-                icon: _deleting
-                    ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.delete_outline_rounded, size: 18),
-                label: const Text('Delete'),
               ),
-            ),
-          ],
-        ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _deleting ? null : _delete,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.danger,
+                    side: BorderSide(color: AppColors.danger.withValues(alpha: 0.4)),
+                  ),
+                  icon: _deleting
+                      ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.delete_outline_rounded, size: 18),
+                  label: const Text('Delete'),
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
 

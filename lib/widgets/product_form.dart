@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 
+import '../data/auth_repository.dart';
 import '../models/product.dart';
 import '../state/bag_controller.dart';
 import '../state/shop_controller.dart';
@@ -345,15 +347,24 @@ class _ProductFormState extends ConsumerState<ProductForm> {
 
 /// Turns Supabase/Postgres errors into something a person can act on.
 String describeError(Object e) {
+  if (e is NotAdminException) return e.toString();
+  if (e is AuthException) {
+    final message = e.message.toLowerCase();
+    if (message.contains('invalid login credentials')) return 'Wrong email or password.';
+    if (message.contains('email not confirmed')) {
+      return 'This account’s email isn’t confirmed yet. Confirm it in Supabase under Authentication → Users.';
+    }
+    return e.message;
+  }
   final text = e.toString();
   if (text.contains('PGRST116')) {
-    return 'Supabase saved nothing — check the row-level security policies in supabase/schema.sql.';
+    return 'Supabase changed nothing. Only admin accounts can add, edit or delete products. Sign in again and retry.';
   }
   if (text.contains('42501') || text.contains('row-level security')) {
-    return 'Blocked by row-level security. Run supabase/schema.sql in the SQL editor.';
+    return 'Only signed-in admin accounts can add, edit or delete products.';
   }
   if (text.contains('42P01') || text.contains('PGRST205')) {
-    return 'The products table does not exist yet. Run supabase/schema.sql in the SQL editor.';
+    return 'A table is missing. Run supabase/schema.sql in the SQL editor.';
   }
   if (text.contains('SocketException') || text.contains('ClientException') || text.contains('Failed host lookup')) {
     return 'Can’t reach Supabase. Check your internet connection and SUPABASE_URL.';
