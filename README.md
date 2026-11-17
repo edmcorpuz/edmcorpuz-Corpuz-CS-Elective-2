@@ -1,21 +1,34 @@
 # FACET — 3D Appliance Store
 
-**CS Elective 2 · Supabase-Flutter Activity: Price Filter + Pagination**
-Branch: `backend-filter-pagination`
+**CS Elective 2 · Supabase-Auth Activity: Sign in with GitHub**
+Branch: `backend-auth` (builds on `backend-filter-pagination`)
 
 ### ▶ [Open the live website](https://edmcorpuz.github.io/edmcorpuz-Corpuz-CS-Elective-2/)
 
 `https://edmcorpuz.github.io/edmcorpuz-Corpuz-CS-Elective-2/`: the app
 running in your browser against the real Supabase database. Nothing to install.
-Anyone can browse; adding, editing and deleting appliances need an
-**Admin sign in** (top right).
+Anyone can browse. **Sign in** (top right) with GitHub or email to check
+out; admin accounts also get the add, edit and delete tools.
 
 FACET is a Flutter home-appliance store backed by Supabase. Every product is
 a live 3D appliance (fridge, washer, microwave, TV, fan, aircon, rice cooker,
 blender, air fryer, toaster, kettle or robot vacuum). Each one is drawn by a
 small renderer written in pure Dart, so you don't need any 3D model files.
 
-## Activity checklist
+## Supabase-Auth activity
+
+| Requirement | Where it lives |
+| --- | --- |
+| **One extra 3rd-party provider**: GitHub | Enabled in Supabase → Authentication → Sign In / Providers → GitHub, backed by a GitHub OAuth app whose callback is `https://<project>.supabase.co/auth/v1/callback` |
+| **Integrated as an additional sign-in option** | “Continue with GitHub” sits above the email + password form in [`lib/widgets/sign_in_dialog.dart`](lib/widgets/sign_in_dialog.dart) → `signInWithOAuth(OAuthProvider.github)` in [`lib/data/auth_repository.dart`](lib/data/auth_repository.dart) |
+| Works on web and phones | Web returns to the same page (Supabase finishes the sign-in from the URL); Android and iOS return through the `io.supabase.facetshop://login-callback/` deep link registered in `AndroidManifest.xml` and `Info.plist` |
+| Signed-in state in the UI | Riverpod `AccountController` in [`lib/state/account_controller.dart`](lib/state/account_controller.dart): the top bar shows your GitHub photo and name, checkout asks visitors to sign in, and admins get the editing tools |
+
+A first-time GitHub sign-in creates the FACET account automatically. People
+who sign in with GitHub are shoppers; only accounts listed in the `admins`
+table can change products, whichever way they signed in.
+
+## Price filter + pagination activity
 
 | Requirement | Where it lives |
 | --- | --- |
@@ -76,12 +89,23 @@ ideas for what to build next.
    select id from auth.users where email = 'you@example.com'
    on conflict do nothing;
    ```
-   Finally, in **Authentication → Sign In / Providers**, turn off
-   **Allow new users to sign up** so nobody else can create accounts.
-3. **Add your keys.** Copy `env.example.json` to `env.json`, then fill in the
+3. **Turn on GitHub sign-in.**
+   - On GitHub, open **Settings → Developer settings → OAuth Apps → New OAuth
+     App**. Use the website as the homepage URL and
+     `https://<project-ref>.supabase.co/auth/v1/callback` as the redirect URI.
+     Register it, then click **Generate a new client secret**.
+   - In Supabase, open **Authentication → Sign In / Providers → GitHub**, turn
+     it on, paste the Client ID and Client Secret, and save.
+   - In **Authentication → URL Configuration**, set the Site URL to the
+     website and add these Redirect URLs: the website followed by `**`,
+     `http://localhost:*/**` (for local testing) and
+     `io.supabase.facetshop://login-callback/` (for the phone app).
+   - Keep **Allow new users to sign up** on, so a first GitHub sign-in can
+     create an account.
+4. **Add your keys.** Copy `env.example.json` to `env.json`, then fill in the
    Project URL and publishable key from **Project Settings → API Keys**.
    `env.json` is git-ignored.
-4. **Run it.**
+5. **Run it.**
    ```bash
    flutter pub get
    flutter run --dart-define-from-file=env.json
@@ -98,11 +122,11 @@ itself decides who may do what (Row Level Security in
 [`supabase/schema.sql`](supabase/schema.sql)):
 
 - **Visitors** (no account) can only read products.
+- **Shoppers** (signed in with GitHub or email) can also check out, but
+  can't change products.
 - **Admins** (accounts listed in the `admins` table) can add, edit and delete.
-- Any other signed-in account is signed straight back out, and the database
-  would reject its changes anyway.
 
-The app hides the add, edit and delete buttons until an admin signs in.
+The app hides the add, edit and delete buttons unless an admin is signed in.
 Hiding the buttons is only for convenience: the database rules are what
 block everyone else.
 
@@ -127,10 +151,10 @@ lib/
   main.dart                       Supabase.initialize + ProviderScope
   config/env.dart                 keys from --dart-define-from-file
   data/product_repository.dart    all Supabase queries (filter, range, count, CRUD)
-  data/auth_repository.dart       admin sign-in + "is this account an admin?"
+  data/auth_repository.dart       email + GitHub sign-in, "is this account an admin?"
   models/product.dart             Product model, ₱ formatting
   state/shop_controller.dart      Riverpod: pagination + filter state
-  state/admin_controller.dart     Riverpod: who is signed in, admin or not
+  state/account_controller.dart   Riverpod: who is signed in, admin or not
   state/shop_filter.dart          search / category / price / sort
   state/bag_controller.dart       in-memory shopping bag
   three_d/mesh.dart               vectors, mesh, MeshBuilder primitives
@@ -138,7 +162,7 @@ lib/
   three_d/appliance_painter.dart  the renderer
   three_d/appliance_view.dart     animated widget (sway, hover, drag)
   widgets/                        filter panel + collapsible sidebar, cards,
-                                  pagination bar, form, bag, admin sign-in
+                                  pagination bar, form, bag, sign-in dialog
   screens/                        shop, product detail, setup
 supabase/
   schema.sql                      products + admins tables, indexes, RLS
@@ -158,5 +182,5 @@ page size, next and last page, the price range, category plus search, and
 deleting the last item on a page. A second set checks that every 3D
 primitive's faces point outward, that all 12 appliance models build and fit
 on screen, and that the fridge door swings toward the viewer. A third set
-checks admin sign-in: admins unlock editing, wrong passwords and non-admin
-accounts are turned away, and signing out locks editing again.
+checks sign-in: email and GitHub sign-ins, admins vs shoppers, a cancelled
+GitHub sign-in, wrong passwords and signing out.

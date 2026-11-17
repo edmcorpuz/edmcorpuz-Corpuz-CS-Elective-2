@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 
-import '../data/auth_repository.dart';
 import '../models/product.dart';
 import '../state/bag_controller.dart';
 import '../state/shop_controller.dart';
@@ -347,10 +346,18 @@ class _ProductFormState extends ConsumerState<ProductForm> {
 
 /// Turns Supabase/Postgres errors into something a person can act on.
 String describeError(Object e) {
-  if (e is NotAdminException) return e.toString();
   if (e is AuthException) {
     final message = e.message.toLowerCase();
     if (message.contains('invalid login credentials')) return 'Wrong email or password.';
+    if (message.contains('provider is not enabled') || message.contains('unsupported provider')) {
+      return 'GitHub sign-in isn’t switched on yet. Enable the GitHub provider in Supabase → Authentication → Sign In / Providers.';
+    }
+    if (message.contains('signups not allowed') || message.contains('signup is disabled')) {
+      return 'New accounts are turned off for this store. Turn on “Allow new users to sign up” in Supabase.';
+    }
+    if (message.contains('access_denied') || message.contains('denied')) {
+      return 'GitHub sign-in was cancelled.';
+    }
     if (message.contains('email not confirmed')) {
       return 'This account’s email isn’t confirmed yet. Confirm it in Supabase under Authentication → Users.';
     }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/product.dart';
-import '../state/admin_controller.dart';
+import '../state/account_controller.dart';
 import '../state/bag_controller.dart';
 import '../state/shop_controller.dart';
 import '../theme/app_theme.dart';
@@ -66,7 +66,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   Widget build(BuildContext context) {
     final p = _product;
     final inBag = ref.watch(bagProvider.select((b) => b[p.id]?.quantity ?? 0));
-    final isAdmin = ref.watch(adminProvider.select((a) => a.isAdmin));
+    final isAdmin = ref.watch(accountProvider.select((a) => a.isAdmin));
 
     final stage = Stack(
       children: [

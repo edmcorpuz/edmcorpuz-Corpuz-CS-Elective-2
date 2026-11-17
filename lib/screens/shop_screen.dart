@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/product.dart';
-import '../state/admin_controller.dart';
+import '../state/account_controller.dart';
 import '../state/bag_controller.dart';
 import '../state/shop_controller.dart';
 import '../theme/app_theme.dart';
+import '../widgets/account_avatar.dart';
 import '../widgets/bag_sheet.dart';
 import '../widgets/filter_panel.dart';
 import '../widgets/filter_sidebar.dart';
@@ -95,30 +96,34 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
   Future<void> _signIn() async {
     final signedIn = await showSignInDialog(context);
     if (signedIn == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Signed in as admin. You can now add, edit and delete appliances.')),
-      );
+      final account = ref.read(accountProvider);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(account.isAdmin
+            ? 'Signed in as admin. You can now add, edit and delete appliances.'
+            : 'Signed in as ${account.user?.displayName}.'),
+      ));
     }
   }
 
   Future<void> _signOut() async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await ref.read(adminProvider.notifier).signOut();
+      await ref.read(accountProvider.notifier).signOut();
       messenger.showSnackBar(const SnackBar(content: Text('Signed out')));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(describeError(e))));
     }
   }
 
-  Widget _accountActions(AdminState admin, double width) {
-    if (!admin.isAdmin) {
+  Widget _accountActions(AccountState account, double width) {
+    final user = account.user;
+    if (user == null) {
       return width < 480
-          ? IconButton(tooltip: 'Admin sign in', onPressed: _signIn, icon: const Icon(Icons.lock_outline_rounded))
+          ? IconButton(tooltip: 'Sign in', onPressed: _signIn, icon: const Icon(Icons.person_outline_rounded))
           : OutlinedButton.icon(
               onPressed: _signIn,
-              icon: const Icon(Icons.lock_outline_rounded, size: 16),
-              label: const Text('Admin sign in'),
+              icon: const Icon(Icons.person_outline_rounded, size: 18),
+              label: const Text('Sign in'),
               style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
             );
     }
@@ -126,17 +131,22 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         PopupMenuButton<void>(
-          tooltip: 'Admin account',
-          icon: const Icon(Icons.admin_panel_settings_outlined, color: AppColors.accent),
+          tooltip: 'Your account',
+          icon: AccountAvatar(user: user, admin: account.isAdmin),
           itemBuilder: (_) => [
             PopupMenuItem<void>(
               enabled: false,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('SIGNED IN AS ADMIN', style: monoLabel(size: 9.5)),
+                  Text(
+                    account.isAdmin ? 'ADMIN · VIA ${user.providerLabel.toUpperCase()}' : 'SIGNED IN VIA ${user.providerLabel.toUpperCase()}',
+                    style: monoLabel(size: 9.5, color: account.isAdmin ? AppColors.accent : AppColors.muted),
+                  ),
                   const SizedBox(height: 4),
-                  Text(admin.email ?? '', style: const TextStyle(color: AppColors.text)),
+                  Text(user.displayName, style: const TextStyle(color: AppColors.text, fontWeight: FontWeight.w600)),
+                  if (user.email != null && user.email != user.displayName)
+                    Text(user.email!, style: const TextStyle(color: AppColors.muted, fontSize: 12.5)),
                 ],
               ),
             ),
@@ -149,15 +159,17 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
             ),
           ],
         ),
-        const SizedBox(width: 6),
-        width < 480
-            ? IconButton.filled(tooltip: 'New appliance', onPressed: _createProduct, icon: const Icon(Icons.add_rounded))
-            : FilledButton.icon(
-                onPressed: _createProduct,
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('New appliance'),
-                style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12)),
-              ),
+        if (account.isAdmin) ...[
+          const SizedBox(width: 6),
+          width < 480
+              ? IconButton.filled(tooltip: 'New appliance', onPressed: _createProduct, icon: const Icon(Icons.add_rounded))
+              : FilledButton.icon(
+                  onPressed: _createProduct,
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('New appliance'),
+                  style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12)),
+                ),
+        ],
       ],
     );
   }
@@ -165,7 +177,13 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(shopControllerProvider);
-    final admin = ref.watch(adminProvider);
+    final account = ref.watch(accountProvider);
+    // A GitHub sign-in that failed on the way back (cancelled, sign-ups off…).
+    ref.listen(accountProvider.select((a) => a.error), (_, error) {
+      if (error == null) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(describeError(error))));
+      ref.read(accountProvider.notifier).clearError();
+    });
     final bagCount = ref.watch(bagProvider.select((b) => b.values.fold(0, (s, l) => s + l.quantity)));
     final width = MediaQuery.sizeOf(context).width;
     final wide = width >= 1100;
@@ -185,7 +203,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
             ),
           ),
           SliverToBoxAdapter(child: _resultsHeader(state, wide)),
-          ..._body(state, isAdmin: admin.isAdmin),
+          ..._body(state, isAdmin: account.isAdmin),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 40, 16, 32),
@@ -238,7 +256,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
           const SizedBox(width: 6),
           Padding(
             padding: const EdgeInsets.only(right: 16),
-            child: _accountActions(admin, width),
+            child: _accountActions(account, width),
           ),
         ],
       ),
