@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/product.dart';
+import '../state/account_controller.dart';
 import '../state/bag_controller.dart';
 import '../theme/app_theme.dart';
 import '../three_d/appliance_view.dart';
+import 'sign_in_dialog.dart';
 
 void showBag(BuildContext context) {
   showModalBottomSheet<void>(
@@ -22,6 +24,7 @@ class BagSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final lines = ref.watch(bagProvider).values.toList();
+    final account = ref.watch(accountProvider);
     final bag = ref.read(bagProvider.notifier);
     final total = lines.fold(0.0, (sum, l) => sum + l.subtotal);
 
@@ -104,12 +107,19 @@ class BagSheet extends ConsumerWidget {
                   ? null
                   : () {
                       final messenger = ScaffoldMessenger.of(context);
-                      Navigator.of(context).pop();
-                      messenger.showSnackBar(
-                        const SnackBar(content: Text('Demo store: checkout isn’t connected yet. Your bag is saved.')),
-                      );
+                      final navigator = Navigator.of(context);
+                      navigator.pop();
+                      if (account.user == null) {
+                        showSignInDialog(navigator.context, reason: 'Sign in to check out. Your bag stays as it is.');
+                        return;
+                      }
+                      messenger.showSnackBar(SnackBar(
+                        content: Text(
+                          'Thanks, ${account.user!.displayName}! This is a demo store, so no payment is taken. Your bag is saved.',
+                        ),
+                      ));
                     },
-              child: const Text('Checkout'),
+              child: Text(account.user == null ? 'Sign in to check out' : 'Checkout'),
             ),
           ],
         ),
