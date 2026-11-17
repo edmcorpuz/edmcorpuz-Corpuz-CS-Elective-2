@@ -36,7 +36,7 @@ table can change products, whichever way they signed in.
 | **Pagination**: 6–8 products per page | `kPageSize = 8` in [`lib/state/shop_controller.dart`](lib/state/shop_controller.dart) |
 | Pagination done with a **Supabase query** | `.range(from, to).count(CountOption.exact)`: Postgres returns only the 8 rows for the page plus the total count |
 | Handled on the frontend with **state management** | Riverpod `NotifierProvider` (`ShopController` / `ShopState`) holds the page, total, filters and loading/error state; the UI only renders that state |
-| Update / delete / filter from the class session | Edit and Delete on the product page and “New appliance” in the top bar (shown after **Admin sign in**), plus category, search and sort filters |
+| Update / delete / filter from the class session | Edit and Delete on the product page and “New appliance” in the top bar (shown when an admin is signed in), plus category, search and sort filters |
 
 All filters run on the server and are combined in one query: search (`ilike`),
 category (`eq`), price range (`gte`/`lte`), sort (`order`) and page (`range`).
