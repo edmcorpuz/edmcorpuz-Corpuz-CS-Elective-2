@@ -7,14 +7,16 @@ import '../state/bag_controller.dart';
 import '../state/shop_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/account_avatar.dart';
-import '../widgets/bag_sheet.dart';
+import '../widgets/confirm_delete.dart';
 import '../widgets/filter_panel.dart';
 import '../widgets/filter_sidebar.dart';
 import '../widgets/pagination_bar.dart';
 import '../widgets/product_card.dart';
 import '../widgets/product_form.dart';
 import '../widgets/shop_hero.dart';
-import '../widgets/sign_in_dialog.dart';
+import 'cart_screen.dart';
+import 'categories_screen.dart';
+import 'orders_screen.dart';
 import 'product_detail_screen.dart';
 
 class ShopScreen extends ConsumerStatefulWidget {
@@ -64,8 +66,8 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(
-        content: Text('${p.name} added to bag'),
-        action: SnackBarAction(label: 'VIEW', textColor: AppColors.accent, onPressed: () => showBag(context)),
+        content: Text('${p.name} added to cart'),
+        action: SnackBarAction(label: 'VIEW CART', textColor: AppColors.accent, onPressed: () => _open(const CartScreen())),
       ));
   }
 
@@ -93,17 +95,30 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     }
   }
 
-  Future<void> _signIn() async {
-    final signedIn = await showSignInDialog(context);
-    if (signedIn == true && mounted) {
-      final account = ref.read(accountProvider);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(account.isAdmin
-            ? 'Signed in as admin. You can now add, edit and delete appliances.'
-            : 'Signed in as ${account.user?.displayName}.'),
-      ));
+  Future<void> _editProduct(Product p) async {
+    final saved = await showProductForm(context, initial: p);
+    if (saved != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${saved.name} saved')));
     }
   }
+
+  Future<void> _deleteProduct(Product p) async {
+    final ok = await confirmDelete(
+      context,
+      p.name,
+      'This removes the product from the catalogue. Past orders keep their own copy of its name and price.',
+    );
+    if (!ok || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(shopControllerProvider.notifier).delete(p);
+      messenger.showSnackBar(SnackBar(content: Text('${p.name} deleted')));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(describeError(e))));
+    }
+  }
+
+  void _open(Widget screen) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
 
   Future<void> _signOut() async {
     final messenger = ScaffoldMessenger.of(context);
@@ -115,21 +130,41 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     }
   }
 
-  Widget _accountActions(AccountState account, double width) {
-    final user = account.user;
-    if (user == null) {
-      return width < 480
-          ? IconButton(tooltip: 'Sign in', onPressed: _signIn, icon: const Icon(Icons.person_outline_rounded))
-          : OutlinedButton.icon(
-              onPressed: _signIn,
-              icon: const Icon(Icons.person_outline_rounded, size: 18),
-              label: const Text('Sign in'),
-              style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
-            );
-    }
+  Widget _accountActions(AccountState account, int cartCount) {
+    final user = account.user!;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (account.isAdmin) ...[
+          IconButton(
+            tooltip: 'Categories',
+            onPressed: () => _open(const CategoriesScreen()),
+            icon: const Icon(Icons.category_outlined),
+          ),
+          IconButton(
+            tooltip: 'All orders',
+            onPressed: () => _open(const OrdersScreen()),
+            icon: const Icon(Icons.receipt_long_outlined),
+          ),
+        ] else ...[
+          IconButton(
+            tooltip: 'My orders',
+            onPressed: () => _open(const OrdersScreen()),
+            icon: const Icon(Icons.receipt_long_outlined),
+          ),
+          IconButton(
+            tooltip: 'Cart',
+            onPressed: () => _open(const CartScreen()),
+            icon: Badge.count(
+              count: cartCount,
+              isLabelVisible: cartCount > 0,
+              backgroundColor: AppColors.accent,
+              textColor: Colors.black,
+              child: const Icon(Icons.shopping_bag_outlined),
+            ),
+          ),
+        ],
+        const SizedBox(width: 6),
         PopupMenuButton<void>(
           tooltip: 'Your account',
           icon: AccountAvatar(user: user, admin: account.isAdmin),
@@ -159,17 +194,6 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
             ),
           ],
         ),
-        if (account.isAdmin) ...[
-          const SizedBox(width: 6),
-          width < 480
-              ? IconButton.filled(tooltip: 'New appliance', onPressed: _createProduct, icon: const Icon(Icons.add_rounded))
-              : FilledButton.icon(
-                  onPressed: _createProduct,
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('New appliance'),
-                  style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12)),
-                ),
-        ],
       ],
     );
   }
@@ -178,12 +202,6 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(shopControllerProvider);
     final account = ref.watch(accountProvider);
-    // A GitHub sign-in that failed on the way back (cancelled, sign-ups off…).
-    ref.listen(accountProvider.select((a) => a.error), (_, error) {
-      if (error == null) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(describeError(error))));
-      ref.read(accountProvider.notifier).clearError();
-    });
     final bagCount = ref.watch(bagProvider.select((b) => b.values.fold(0, (s, l) => s + l.quantity)));
     final width = MediaQuery.sizeOf(context).width;
     final wide = width >= 1100;
@@ -242,24 +260,19 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                 child: const Icon(Icons.tune_rounded),
               ),
             ),
-          IconButton(
-            tooltip: 'Bag',
-            onPressed: () => showBag(context),
-            icon: Badge.count(
-              count: bagCount,
-              isLabelVisible: bagCount > 0,
-              backgroundColor: AppColors.accent,
-              textColor: Colors.black,
-              child: const Icon(Icons.shopping_bag_outlined),
-            ),
-          ),
-          const SizedBox(width: 6),
           Padding(
             padding: const EdgeInsets.only(right: 16),
-            child: _accountActions(account, width),
+            child: _accountActions(account, bagCount),
           ),
         ],
       ),
+      floatingActionButton: account.isAdmin
+          ? FloatingActionButton.extended(
+              onPressed: _createProduct,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Add product'),
+            )
+          : null,
       body: wide
           ? Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -374,7 +387,9 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                     child: ProductCard(
                       product: p,
                       onOpen: () => _openProduct(p),
-                      onAddToBag: () => _addToBag(p),
+                      onAddToBag: isAdmin ? null : () => _addToBag(p),
+                      onEdit: isAdmin ? () => _editProduct(p) : null,
+                      onDelete: isAdmin ? () => _deleteProduct(p) : null,
                     ),
                   );
                 },

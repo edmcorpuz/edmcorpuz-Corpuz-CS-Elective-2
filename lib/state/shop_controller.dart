@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -166,6 +167,27 @@ class ShopController extends Notifier<ShopState> {
 
   Future<void> delete(Product product) async {
     await _repo.delete(product.id!);
+    await refresh();
+  }
+
+  /// Uploads a product photo and returns its public URL.
+  Future<String> uploadImage(Uint8List bytes, {required String extension}) =>
+      _repo.uploadImage(bytes, extension: extension);
+
+  Future<void> addCategory(String name) async {
+    await _repo.addCategory(name);
+    await refresh();
+  }
+
+  Future<void> renameCategory(String from, String to) async {
+    await _repo.renameCategory(from, to);
+    if (state.filter.category == from) state = state.copyWith(filter: state.filter.copyWith(category: () => to));
+    await refresh();
+  }
+
+  Future<void> deleteCategory(String name) async {
+    await _repo.deleteCategory(name);
+    if (state.filter.category == name) state = state.copyWith(filter: state.filter.copyWith(category: () => null));
     await refresh();
   }
 

@@ -13,6 +13,7 @@ class Product {
     required this.stock,
     required this.kind,
     required this.colorHex,
+    this.imageUrl,
     this.createdAt,
   });
 
@@ -24,6 +25,9 @@ class Product {
   final int stock;
   final ApplianceKind kind;
   final String colorHex;
+
+  /// Public URL of the product photo in Supabase Storage, if one was uploaded.
+  final String? imageUrl;
   final DateTime? createdAt;
 
   Color get color => colorFromHex(colorHex);
@@ -39,6 +43,7 @@ class Product {
         stock: (map['stock'] as num?)?.toInt() ?? 0,
         kind: ApplianceKind.fromDb(map['model'] as String?),
         colorHex: (map['color'] as String?) ?? '#F2F2F2',
+        imageUrl: map['image_url'] as String?,
         createdAt: map['created_at'] == null
             ? null
             : DateTime.tryParse(map['created_at'] as String),
@@ -53,6 +58,7 @@ class Product {
         'stock': stock,
         'model': kind.dbName,
         'color': colorHex.toUpperCase(),
+        'image_url': imageUrl,
       };
 
   Product copyWith({
@@ -64,6 +70,7 @@ class Product {
     int? stock,
     ApplianceKind? kind,
     String? colorHex,
+    String? imageUrl,
   }) =>
       Product(
         id: id ?? this.id,
@@ -74,6 +81,7 @@ class Product {
         stock: stock ?? this.stock,
         kind: kind ?? this.kind,
         colorHex: colorHex ?? this.colorHex,
+        imageUrl: imageUrl ?? this.imageUrl,
         createdAt: createdAt,
       );
 }
