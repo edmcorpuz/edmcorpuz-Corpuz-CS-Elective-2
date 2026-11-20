@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthException, PostgrestException;
 
 import '../models/product.dart';
 import '../state/bag_controller.dart';
@@ -54,7 +55,10 @@ class _ProductFormState extends ConsumerState<ProductForm> {
   late final TextEditingController _description;
   late final TextEditingController _price;
   late final TextEditingController _stock;
-  late final TextEditingController _category;
+  String? _category;
+  String? _imageUrl;
+  Uint8List? _pickedBytes;
+  String _pickedExt = 'jpg';
   late ApplianceKind _kind;
   late String _color;
   bool _saving = false;
@@ -70,7 +74,8 @@ class _ProductFormState extends ConsumerState<ProductForm> {
     _description = TextEditingController(text: p?.description ?? '');
     _price = TextEditingController(text: p == null ? '' : _plain(p.price));
     _stock = TextEditingController(text: p == null ? '10' : '${p.stock}');
-    _category = TextEditingController(text: p?.category ?? ApplianceKind.fridge.category);
+    _category = p?.category ?? ApplianceKind.fridge.category;
+    _imageUrl = p?.imageUrl;
     _kind = p?.kind ?? ApplianceKind.fridge;
     _color = (p?.colorHex ?? kSwatches.first).toUpperCase();
   }
@@ -80,10 +85,25 @@ class _ProductFormState extends ConsumerState<ProductForm> {
 
   @override
   void dispose() {
-    for (final c in [_name, _description, _price, _stock, _category]) {
+    for (final c in [_name, _description, _price, _stock]) {
       c.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _pickPhoto() async {
+    try {
+      final file = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1600, imageQuality: 85);
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
+      final name = file.name.toLowerCase();
+      setState(() {
+        _pickedBytes = bytes;
+        _pickedExt = name.contains('.') ? name.split('.').last : 'jpg';
+      });
+    } catch (e) {
+      setState(() => _error = 'Couldn’t open that photo: $e');
+    }
   }
 
   Future<void> _save() async {
@@ -92,17 +112,32 @@ class _ProductFormState extends ConsumerState<ProductForm> {
       _saving = true;
       _error = null;
     });
+    final controller = ref.read(shopControllerProvider.notifier);
+    if (_pickedBytes != null) {
+      try {
+        _imageUrl = await controller.uploadImage(_pickedBytes!, extension: _pickedExt);
+        _pickedBytes = null;
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _saving = false;
+            _error = 'Photo upload failed: ${describeError(e)}';
+          });
+        }
+        return;
+      }
+    }
     final draft = Product(
       id: widget.initial?.id,
       name: _name.text,
       description: _description.text,
       price: double.parse(_price.text.trim()),
-      category: _category.text,
+      category: _category!,
       stock: int.parse(_stock.text.trim()),
       kind: _kind,
       colorHex: _color,
+      imageUrl: _imageUrl,
     );
-    final controller = ref.read(shopControllerProvider.notifier);
     try {
       final saved = _editing ? await controller.update(draft) : await controller.create(draft);
       ref.read(bagProvider.notifier).sync(saved);
@@ -120,6 +155,7 @@ class _ProductFormState extends ConsumerState<ProductForm> {
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(shopControllerProvider.select((s) => s.categories));
+    final category = categories.contains(_category) ? _category : null;
     final wide = MediaQuery.sizeOf(context).width >= 720;
 
     final preview = Container(
@@ -193,25 +229,13 @@ class _ProductFormState extends ConsumerState<ProductForm> {
             ],
           ),
           const SizedBox(height: 16),
-          TextFormField(
-            controller: _category,
+          DropdownButtonFormField<String>(
+            initialValue: category,
             decoration: const InputDecoration(labelText: 'Category'),
-            validator: (v) => (v == null || v.trim().isEmpty) ? 'Pick or type a category' : null,
+            items: [for (final c in categories) DropdownMenuItem(value: c, child: Text(c))],
+            onChanged: (c) => setState(() => _category = c),
+            validator: (c) => c == null ? 'Pick a category (add new ones under Categories)' : null,
           ),
-          if (categories.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (final c in categories)
-                  ActionChip(
-                    label: Text(c, style: const TextStyle(fontSize: 12)),
-                    onPressed: () => setState(() => _category.text = c),
-                  ),
-              ],
-            ),
-          ],
           const SizedBox(height: 16),
           TextFormField(
             controller: _description,
@@ -232,9 +256,10 @@ class _ProductFormState extends ConsumerState<ProductForm> {
                   selected: _kind == k,
                   onSelected: (_) => setState(() {
                     // Keep the category in step with the type unless the
-                    // user typed their own.
-                    final c = _category.text.trim();
-                    if (c.isEmpty || c == _kind.category) _category.text = k.category;
+                    // admin picked a different one.
+                    if ((_category == null || _category == _kind.category) && categories.contains(k.category)) {
+                      _category = k.category;
+                    }
                     _kind = k;
                   }),
                 ),
@@ -247,6 +272,47 @@ class _ProductFormState extends ConsumerState<ProductForm> {
             spacing: 10,
             runSpacing: 10,
             children: [for (final hex in kSwatches) _swatch(hex)],
+          ),
+          const SizedBox(height: 18),
+          Text('PHOTO', style: monoLabel()),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 88,
+                  height: 88,
+                  child: _pickedBytes != null
+                      ? Image.memory(_pickedBytes!, fit: BoxFit.cover)
+                      : _imageUrl != null
+                          ? Image.network(_imageUrl!, fit: BoxFit.cover, errorBuilder: (_, _, _) => const _PhotoPlaceholder())
+                          : const _PhotoPlaceholder(),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _saving ? null : _pickPhoto,
+                      icon: const Icon(Icons.photo_outlined, size: 18),
+                      label: Text(_pickedBytes != null || _imageUrl != null ? 'Change photo' : 'Upload photo'),
+                    ),
+                    if (_pickedBytes != null || _imageUrl != null)
+                      TextButton(
+                        onPressed: _saving ? null : () => setState(() {
+                          _pickedBytes = null;
+                          _imageUrl = null;
+                        }),
+                        child: const Text('Remove'),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
           if (_error != null) ...[
             const SizedBox(height: 16),
@@ -268,12 +334,12 @@ class _ProductFormState extends ConsumerState<ProductForm> {
           onPressed: _saving ? null : _save,
           child: _saving
               ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-              : Text(_editing ? 'Save changes' : 'Add appliance'),
+              : Text(_editing ? 'Save changes' : 'Add product'),
         ),
       ],
     );
 
-    final title = Text(_editing ? 'Edit appliance' : 'New appliance', style: displayStyle(30));
+    final title = Text(_editing ? 'Edit product' : 'New product', style: displayStyle(30));
 
     if (wide) {
       return Padding(
@@ -344,37 +410,64 @@ class _ProductFormState extends ConsumerState<ProductForm> {
   }
 }
 
+class _PhotoPlaceholder extends StatelessWidget {
+  const _PhotoPlaceholder();
+
+  @override
+  Widget build(BuildContext context) => const ColoredBox(
+        color: AppColors.surfaceHigh,
+        child: Center(child: Icon(Icons.image_outlined, color: AppColors.muted)),
+      );
+}
+
 /// Turns Supabase/Postgres errors into something a person can act on.
 String describeError(Object e) {
   if (e is AuthException) {
     final message = e.message.toLowerCase();
     if (message.contains('invalid login credentials')) return 'Wrong email or password.';
+    if (message.contains('already registered') || message.contains('already been registered')) {
+      return 'That email already has an account. Log in instead.';
+    }
     if (message.contains('provider is not enabled') || message.contains('unsupported provider')) {
-      return 'GitHub sign-in isn’t switched on yet. Enable the GitHub provider in Supabase → Authentication → Sign In / Providers.';
+      return 'Google sign-in isn’t switched on yet. Enable the Google provider in Supabase → Authentication → Sign In / Providers.';
     }
     if (message.contains('signups not allowed') || message.contains('signup is disabled')) {
       return 'New accounts are turned off for this store. Turn on “Allow new users to sign up” in Supabase.';
     }
     if (message.contains('access_denied') || message.contains('denied')) {
-      return 'GitHub sign-in was cancelled.';
+      return 'Google sign-in was cancelled.';
     }
     if (message.contains('email not confirmed')) {
-      return 'This account’s email isn’t confirmed yet. Confirm it in Supabase under Authentication → Users.';
+      return 'Confirm your email first: open the link we sent you, then log in.';
+    }
+    return e.message;
+  }
+  if (e is PostgrestException) {
+    switch (e.code) {
+      // Raised by place_order() with a message written for customers.
+      case 'P0001' || 'P0002' || '22023':
+        return e.message;
+      case '23503':
+        return 'That category still has products. Move or delete them first.';
+      case '23505':
+        return 'That name is already taken.';
+      case '42501':
+        return e.message.contains('permission denied') || e.message.contains('row-level security')
+            ? 'Your account isn’t allowed to do that.'
+            : e.message;
+      case 'PGRST116':
+        return 'Nothing was changed. Your account may not be allowed to do that, or it was already removed.';
+      case '42P01' || 'PGRST205' || 'PGRST202':
+        return 'Part of the database is missing. Run supabase/schema.sql in the SQL editor.';
     }
     return e.message;
   }
   final text = e.toString();
-  if (text.contains('PGRST116')) {
-    return 'Supabase changed nothing. Only admin accounts can add, edit or delete products. Sign in again and retry.';
-  }
-  if (text.contains('42501') || text.contains('row-level security')) {
-    return 'Only signed-in admin accounts can add, edit or delete products.';
-  }
-  if (text.contains('42P01') || text.contains('PGRST205')) {
-    return 'A table is missing. Run supabase/schema.sql in the SQL editor.';
+  if (text.contains('row-level security') || text.contains('Unauthorized') || text.contains('403')) {
+    return 'Your account isn’t allowed to do that.';
   }
   if (text.contains('SocketException') || text.contains('ClientException') || text.contains('Failed host lookup')) {
-    return 'Can’t reach Supabase. Check your internet connection and SUPABASE_URL.';
+    return 'Can’t reach Supabase. Check your internet connection.';
   }
   return text.replaceFirst('Exception: ', '');
 }

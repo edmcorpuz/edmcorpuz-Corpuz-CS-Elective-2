@@ -13,12 +13,20 @@ class ProductCard extends StatelessWidget {
     super.key,
     required this.product,
     required this.onOpen,
-    required this.onAddToBag,
+    this.onAddToBag,
+    this.onEdit,
+    this.onDelete,
   });
 
   final Product product;
   final VoidCallback onOpen;
+
+  /// Customers: the add-to-cart button.
   final VoidCallback? onAddToBag;
+
+  /// Admins: edit and delete buttons replace add-to-cart.
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   static const _duration = Duration(milliseconds: 320);
 
@@ -67,6 +75,22 @@ class ProductCard extends StatelessWidget {
                     top: 14,
                     child: Text(product.category.toUpperCase(), style: monoLabel(size: 10)),
                   ),
+                  if (product.imageUrl != null)
+                    Positioned(
+                      right: 12,
+                      bottom: 8,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.network(
+                          product.imageUrl!,
+                          width: 46,
+                          height: 46,
+                          fit: BoxFit.cover,
+                          semanticLabel: 'Photo of ${product.name}',
+                          errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                        ),
+                      ),
+                    ),
                   if (product.stock <= 3)
                     Positioned(right: 12, top: 10, child: _StockTag(stock: product.stock)),
                   Positioned(
@@ -116,12 +140,29 @@ class ProductCard extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (onEdit != null || onDelete != null) ...[
+                    IconButton.outlined(
+                      tooltip: 'Edit ${product.name}',
+                      onPressed: onEdit,
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton.outlined(
+                      tooltip: 'Delete ${product.name}',
+                      onPressed: onDelete,
+                      style: IconButton.styleFrom(
+                        foregroundColor: AppColors.danger,
+                        side: BorderSide(color: AppColors.danger.withValues(alpha: 0.4)),
+                      ),
+                      icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                    ),
+                  ] else
                   AnimatedScale(
                     scale: active ? 1.12 : 1,
                     duration: _duration,
                     curve: Curves.easeOutBack,
                     child: IconButton.filled(
-                      tooltip: product.inStock ? 'Add to bag' : 'Sold out',
+                      tooltip: product.inStock ? 'Add to cart' : 'Sold out',
                       onPressed: product.inStock ? onAddToBag : null,
                       style: IconButton.styleFrom(
                         backgroundColor: active ? AppColors.accent : AppColors.text,

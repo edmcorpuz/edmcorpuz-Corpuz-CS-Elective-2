@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/product.dart';
@@ -35,6 +37,17 @@ abstract interface class ProductRepository {
   Future<Product> update(Product product);
 
   Future<void> delete(int id);
+
+  Future<void> addCategory(String name);
+
+  /// Products follow automatically (the foreign key cascades the rename).
+  Future<void> renameCategory(String from, String to);
+
+  /// Fails while products still use the category.
+  Future<void> deleteCategory(String name);
+
+  /// Uploads a product photo to Supabase Storage and returns its public URL.
+  Future<String> uploadImage(Uint8List bytes, {required String extension});
 }
 
 class SupabaseProductRepository implements ProductRepository {
@@ -109,10 +122,8 @@ class SupabaseProductRepository implements ProductRepository {
 
   @override
   Future<List<String>> fetchCategories() async {
-    final rows = await _client.from(table).select('category');
-    final names = {for (final r in rows) r['category'] as String}.toList()
-      ..sort();
-    return names;
+    final rows = await _client.from('categories').select('name').order('name');
+    return [for (final r in rows) r['name'] as String];
   }
 
   @override
@@ -144,6 +155,38 @@ class SupabaseProductRepository implements ProductRepository {
     if (deleted.isEmpty) {
       throw const PostgrestException(message: 'No product was deleted', code: 'PGRST116');
     }
+  }
+
+  @override
+  Future<void> addCategory(String name) async {
+    await _client.from('categories').insert({'name': name.trim()});
+  }
+
+  @override
+  Future<void> renameCategory(String from, String to) async {
+    final updated = await _client.from('categories').update({'name': to.trim()}).eq('name', from).select('id');
+    if (updated.isEmpty) throw const PostgrestException(message: 'No category was renamed', code: 'PGRST116');
+  }
+
+  @override
+  Future<void> deleteCategory(String name) async {
+    final deleted = await _client.from('categories').delete().eq('name', name).select('id');
+    if (deleted.isEmpty) throw const PostgrestException(message: 'No category was deleted', code: 'PGRST116');
+  }
+
+  static const imageBucket = 'product-images';
+
+  @override
+  Future<String> uploadImage(Uint8List bytes, {required String extension}) async {
+    final ext = extension.toLowerCase().replaceAll('jpeg', 'jpg');
+    // A new name per upload, so browsers never show a cached old photo.
+    final path = 'products/${DateTime.now().microsecondsSinceEpoch}.$ext';
+    await _client.storage.from(imageBucket).uploadBinary(
+          path,
+          bytes,
+          fileOptions: FileOptions(contentType: ext == 'jpg' ? 'image/jpeg' : 'image/$ext'),
+        );
+    return _client.storage.from(imageBucket).getPublicUrl(path);
   }
 
   /// Strips LIKE wildcards so a search for "50%" can't match everything.

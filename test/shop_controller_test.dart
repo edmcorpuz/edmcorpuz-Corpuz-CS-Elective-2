@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:unang_flutter_project/data/product_repository.dart';
@@ -47,7 +49,31 @@ class FakeRepository implements ProductRepository {
       rows.isEmpty ? null : PriceBounds(rows.first.price, rows.last.price);
 
   @override
-  Future<List<String>> fetchCategories() async => {for (final p in rows) p.category}.toList()..sort();
+  Future<List<String>> fetchCategories() async => ({...extraCategories, for (final p in rows) p.category}.toList()..sort());
+
+  final Set<String> extraCategories = {};
+
+  @override
+  Future<void> addCategory(String name) async => extraCategories.add(name);
+
+  @override
+  Future<void> renameCategory(String from, String to) async {
+    // Mirrors the foreign key's ON UPDATE CASCADE.
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].category == from) rows[i] = rows[i].copyWith(category: to);
+    }
+    if (extraCategories.remove(from)) extraCategories.add(to);
+  }
+
+  @override
+  Future<void> deleteCategory(String name) async {
+    // Mirrors the foreign key: a category in use can't be deleted.
+    if (rows.any((p) => p.category == name)) throw StateError('in use');
+    extraCategories.remove(name);
+  }
+
+  @override
+  Future<String> uploadImage(Uint8List bytes, {required String extension}) async => 'https://img.example/p.$extension';
 
   @override
   Future<Product> create(Product product) async {
@@ -145,5 +171,26 @@ void main() {
 
   test('search input is stripped of LIKE wildcards', () {
     expect(SupabaseProductRepository.sanitizeSearch(' 50%_off* '), '50off');
+  });
+
+  test('renaming a category moves its products and the active filter', () async {
+    final c = await _start(FakeRepository(4));
+    await c.read(shopControllerProvider.notifier).setCategory('Even');
+    await c.read(shopControllerProvider.notifier).renameCategory('Even', 'Pairs');
+    final state = c.read(shopControllerProvider);
+    expect(state.categories, contains('Pairs'));
+    expect(state.categories, isNot(contains('Even')));
+    expect(state.filter.category, 'Pairs');
+    expect(state.items.every((p) => p.category == 'Pairs'), isTrue);
+  });
+
+  test('a category with products cannot be deleted; an empty one can', () async {
+    final c = await _start(FakeRepository(4));
+    final shop = c.read(shopControllerProvider.notifier);
+    await expectLater(shop.deleteCategory('Even'), throwsStateError);
+    await shop.addCategory('Spare');
+    expect(c.read(shopControllerProvider).categories, contains('Spare'));
+    await shop.deleteCategory('Spare');
+    expect(c.read(shopControllerProvider).categories, isNot(contains('Spare')));
   });
 }

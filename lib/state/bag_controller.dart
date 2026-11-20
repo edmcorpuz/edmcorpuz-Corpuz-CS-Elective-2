@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/product.dart';
+import 'account_controller.dart';
 
 class BagLine {
   const BagLine(this.product, this.quantity);
@@ -14,15 +15,21 @@ class BagLine {
 final bagProvider =
     NotifierProvider<BagController, Map<int, BagLine>>(BagController.new);
 
-/// In-memory shopping bag, keyed by product id.
+/// The cart, keyed by product id. Lives in app state so it survives screen
+/// changes; it empties after a successful order and whenever the signed-in
+/// account changes (including logout).
 class BagController extends Notifier<Map<int, BagLine>> {
   @override
-  Map<int, BagLine> build() => const {};
+  Map<int, BagLine> build() {
+    ref.watch(accountProvider.select((a) => a.user?.id));
+    return const {};
+  }
 
   int get count => state.values.fold(0, (sum, l) => sum + l.quantity);
 
   double get total => state.values.fold(0.0, (sum, l) => sum + l.subtotal);
 
+  /// Adds one; does nothing for sold-out products or past the stock.
   void add(Product product) {
     final id = product.id;
     if (id == null) return;
@@ -44,6 +51,8 @@ class BagController extends Notifier<Map<int, BagLine>> {
   }
 
   void remove(int id) => state = {...state}..remove(id);
+
+  void clear() => state = const {};
 
   /// Keeps bag lines in sync after an edit, or drops them after a delete.
   void sync(Product product, {bool deleted = false}) {

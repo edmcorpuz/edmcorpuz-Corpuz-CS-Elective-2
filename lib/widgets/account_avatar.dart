@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/auth_repository.dart';
 import '../theme/app_theme.dart';
 
-/// GitHub profile photo when there is one, otherwise the first letter of
+/// Google profile photo when there is one, otherwise the first letter of
 /// the name. Admins get an accent ring.
 class AccountAvatar extends StatelessWidget {
   const AccountAvatar({super.key, required this.user, this.admin = false, this.radius = 15});

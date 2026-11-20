@@ -21,37 +21,41 @@ class AccountUser {
   final String? name;
   final String? avatarUrl;
 
-  /// How they signed in: `email` or `github`.
+  /// How they signed in: `email` or `google`.
   final String provider;
 
   String get displayName => name ?? email ?? 'Your account';
 
   String get providerLabel => switch (provider) {
-        'github' => 'GitHub',
+        'google' => 'Google',
         'email' => 'email',
         _ => provider,
       };
 }
 
-/// Sign-in for shoppers and admins. Anyone can browse without an account;
-/// only accounts listed in `public.admins` may change the catalogue.
+/// Sign-up and sign-in for customers and admins. Every new account is a
+/// customer; an account's role lives in `public.profiles`.
 abstract interface class AuthRepository {
   /// Fires whenever someone signs in or out, including when a saved session
-  /// is restored or a GitHub sign-in returns. Sign-in failures from the
-  /// GitHub round trip arrive as stream errors.
+  /// is restored or a Google sign-in returns. Sign-in failures from the
+  /// Google round trip arrive as stream errors.
   Stream<void> get changes;
 
   AccountUser? get currentUser;
 
   Future<void> signInWithEmail({required String email, required String password});
 
-  /// Sends the browser (or the in-app browser on phones) to GitHub. The
+  /// Creates a customer account. Returns false when Supabase wants the email
+  /// confirmed before the first sign-in.
+  Future<bool> signUp({required String email, required String password, required String fullName});
+
+  /// Sends the browser (or the in-app browser on phones) to Google. The
   /// result arrives later through [changes].
-  Future<void> signInWithGitHub();
+  Future<void> signInWithGoogle();
 
   Future<void> signOut();
 
-  /// Whether the signed-in account has a row in `public.admins`.
+  /// Whether the signed-in account's profile has the admin role.
   Future<bool> isAdmin();
 }
 
@@ -73,7 +77,7 @@ class SupabaseAuthRepository implements AuthRepository {
       return value is String && value.trim().isNotEmpty ? value.trim() : null;
     }
 
-    // Supabase joins a GitHub sign-in to an existing account with the same
+    // Supabase joins a Google sign-in to an existing account with the same
     // email, so one account can have several identities. Report the one
     // used most recently, not the account's first provider.
     final identities = [...?user.identities]
@@ -96,9 +100,20 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> signInWithGitHub() async {
+  Future<bool> signUp({required String email, required String password, required String fullName}) async {
+    final res = await _client.auth.signUp(
+      email: email.trim(),
+      password: password,
+      data: {'full_name': fullName.trim()},
+      emailRedirectTo: kIsWeb ? _webReturnUrl() : kMobileAuthRedirect,
+    );
+    return res.session != null;
+  }
+
+  @override
+  Future<void> signInWithGoogle() async {
     await _client.auth.signInWithOAuth(
-      OAuthProvider.github,
+      OAuthProvider.google,
       redirectTo: kIsWeb ? _webReturnUrl() : kMobileAuthRedirect,
     );
   }
@@ -114,9 +129,7 @@ class SupabaseAuthRepository implements AuthRepository {
   Future<bool> isAdmin() async {
     final id = _client.auth.currentUser?.id;
     if (id == null) return false;
-    // RLS only lets an account read its own row, so this finds a row only
-    // when the signed-in account is an admin.
-    final row = await _client.from('admins').select('user_id').eq('user_id', id).maybeSingle();
-    return row != null;
+    final row = await _client.from('profiles').select('roles(name)').eq('id', id).maybeSingle();
+    return (row?['roles'] as Map?)?['name'] == 'admin';
   }
 }

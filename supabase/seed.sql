@@ -1,6 +1,11 @@
 -- 24 sample appliances (3 pages of 8) from ₱1,190 to ₱54,990 so the price
 -- slider and pagination have something to work with.
--- Safe to re-run: it only inserts when the table is empty.
+-- Safe to re-run: categories are skipped if present, products only go in
+-- when the table is empty.
+
+insert into public.categories (name) values
+  ('Refrigeration'), ('Laundry'), ('Kitchen'), ('Cooling'), ('Entertainment'), ('Cleaning')
+on conflict (name) do nothing;
 
 insert into public.products (name, description, price, category, stock, model, color, created_at)
 select v.name, v.description, v.price, v.category, v.stock, v.model, v.color, now() - (v.age || ' hours')::interval

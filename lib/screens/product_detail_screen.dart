@@ -8,6 +8,7 @@ import '../state/shop_controller.dart';
 import '../theme/app_theme.dart';
 import '../three_d/appliance_view.dart';
 import '../three_d/appliances.dart';
+import '../widgets/confirm_delete.dart';
 import '../widgets/product_form.dart';
 
 /// Full-bleed 3D stage + details. Pops with a message after a delete.
@@ -34,22 +35,12 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   }
 
   Future<void> _delete() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Delete ${_product.name}?'),
-        content: const Text('This removes the product from the Supabase table. It can’t be undone.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.danger, foregroundColor: Colors.black),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final confirmed = await confirmDelete(
+      context,
+      _product.name,
+      'This removes the product from the catalogue. Past orders keep their own copy of its name and price.',
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     setState(() => _deleting = true);
     try {
       await ref.read(shopControllerProvider.notifier).delete(_product);
@@ -144,14 +135,35 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         ),
         _SpecRow(label: 'IN STOCK', value: p.stock == 0 ? 'Sold out' : '${p.stock} pcs'),
         _SpecRow(label: 'SKU', value: 'FCT-${p.kind.dbName.toUpperCase()}-${(p.id ?? 0).toString().padLeft(4, '0')}'),
+        if (p.imageUrl != null) ...[
+          const SizedBox(height: 22),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: AspectRatio(
+              aspectRatio: 4 / 3,
+              child: Image.network(
+                p.imageUrl!,
+                fit: BoxFit.cover,
+                semanticLabel: 'Photo of ${p.name}',
+                loadingBuilder: (_, child, progress) => progress == null
+                    ? child
+                    : const ColoredBox(color: AppColors.surfaceHigh, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
+                errorBuilder: (_, _, _) => const ColoredBox(
+                  color: AppColors.surfaceHigh,
+                  child: Center(child: Text('Photo unavailable', style: TextStyle(color: AppColors.muted))),
+                ),
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 26),
-        FilledButton.icon(
-          onPressed: p.inStock && inBag < p.stock ? () => ref.read(bagProvider.notifier).add(p) : null,
-          icon: const Icon(Icons.shopping_bag_outlined, size: 18),
-          label: Text(inBag > 0 ? 'Add another ($inBag in bag)' : 'Add to bag'),
-        ),
+        if (!isAdmin)
+          FilledButton.icon(
+            onPressed: p.inStock && inBag < p.stock ? () => ref.read(bagProvider.notifier).add(p) : null,
+            icon: const Icon(Icons.shopping_bag_outlined, size: 18),
+            label: Text(!p.inStock ? 'Sold out' : inBag > 0 ? 'Add another ($inBag in cart)' : 'Add to cart'),
+          ),
         if (isAdmin) ...[
-          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
