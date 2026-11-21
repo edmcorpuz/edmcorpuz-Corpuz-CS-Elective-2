@@ -194,6 +194,13 @@ void main() {
       expect(read().signedIn, isFalse);
     });
 
+    test('a failed Google code exchange reads as a sentence, not a URL fragment', () {
+      expect(
+        describeError(const AuthException('Unable to exchange external code%3A 4%2F0A')),
+        startsWith('Google sign-in couldn’t be completed.'),
+      );
+    });
+
     test('signing out clears the account and admin tools', () async {
       await controller().signInWithEmail(email: 'owner@test.dev', password: 'right-pass');
       await controller().signOut();

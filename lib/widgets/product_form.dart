@@ -437,6 +437,10 @@ String describeError(Object e) {
     if (message.contains('access_denied') || message.contains('denied')) {
       return 'Google sign-in was cancelled.';
     }
+    // Google approved the sign-in but Supabase couldn't finish it (usually a wrong client secret).
+    if (message.contains('unable to exchange external code')) {
+      return 'Google sign-in couldn’t be completed. Try again, or log in with email. If it keeps happening, the store’s Google setup needs fixing.';
+    }
     if (message.contains('email not confirmed')) {
       return 'Confirm your email first: open the link we sent you, then log in.';
     }
