@@ -13,7 +13,7 @@ class SetupScreen extends StatelessWidget {
     const steps = [
       'Create a project at supabase.com and run supabase/schema.sql, then supabase/seed.sql, in its SQL editor.',
       'Copy env.example.json to env.json and paste your Project URL and publishable key into it.',
-      'Run: flutter run --dart-define-from-file=env.json (or press F5 in VS Code — the launch config already passes it).',
+      'Run: flutter run --dart-define-from-file=env.json (or press F5 in VS Code: the launch config already passes it).',
     ];
     return Scaffold(
       body: Center(
@@ -24,14 +24,14 @@ class SetupScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(
+                SizedBox(
                   height: 180,
                   child: ApplianceView(kind: ApplianceKind.fridge, color: AppColors.accent, detail: MeshDetail.high, interactive: true, activateOnHover: true),
                 ),
                 const SizedBox(height: 12),
                 Text('Connect Supabase', style: displayStyle(44)),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'FACET reads its appliance catalogue from Supabase, and no project keys were found at build time.',
                   style: TextStyle(color: AppColors.muted, height: 1.5),
                 ),

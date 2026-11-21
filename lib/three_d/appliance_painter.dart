@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 
+import '../theme/app_theme.dart';
 import 'appliances.dart';
 import 'mesh.dart';
 
@@ -186,12 +187,15 @@ class AppliancePainter extends CustomPainter {
         glowAmount = 0.95 * h;
     }
 
-    final key = math.max(0.0, n.dot(_keyLight));
-    final fillLight = math.max(0.0, n.dot(_fillLight)) * 0.28;
+    // Wrapped ("half-Lambert") light: neighbouring faces of a curve shade
+    // into each other, so the low-poly mesh reads smooth rather than faceted.
+    final wrap = n.dot(_keyLight) * 0.5 + 0.5;
+    final key = wrap * wrap;
+    final fillLight = (n.dot(_fillLight) * 0.5 + 0.5) * 0.18;
     final half = (_keyLight + view).normalized();
-    final spec = math.pow(math.max(0.0, n.dot(half)), 32).toDouble() * specular;
-    final rim = math.pow(1 - facing, 2.6).toDouble() * 0.42;
-    final lit = 0.2 + key * 0.86 + fillLight;
+    final spec = math.pow(math.max(0.0, n.dot(half)), 20).toDouble() * specular * 0.75;
+    final rim = math.pow(1 - facing, 3).toDouble() * 0.3;
+    final lit = 0.16 + key * 0.9 + fillLight;
 
     double channel(double b, double r) => (b * lit + spec + rim * r).clamp(0.0, 1.0);
 
@@ -216,7 +220,7 @@ class AppliancePainter extends CustomPainter {
       ..shader = ui.Gradient.radial(
         c,
         width / 2,
-        [Color.fromRGBO(0, 0, 0, 0.6 - 0.2 * h), const Color(0x00000000)],
+        [Color.fromRGBO(0, 0, 0, (AppColors.isDark ? 0.6 : 0.3) - 0.15 * h), const Color(0x00000000)],
       )
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
     canvas.save();

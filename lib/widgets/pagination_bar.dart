@@ -45,7 +45,7 @@ class PaginationBar extends StatelessWidget {
       tooltip: tooltip,
       onPressed: enabled && active ? onTap : null,
       style: IconButton.styleFrom(
-        side: const BorderSide(color: AppColors.line),
+        side: BorderSide(color: AppColors.line),
         foregroundColor: AppColors.text,
         disabledForegroundColor: AppColors.line,
       ),
@@ -65,7 +65,7 @@ class PaginationBar extends StatelessWidget {
           padding: EdgeInsets.zero,
           backgroundColor: selected ? AppColors.accent : Colors.transparent,
           foregroundColor: AppColors.text,
-          disabledForegroundColor: selected ? Colors.black : AppColors.muted,
+          disabledForegroundColor: selected ? AppColors.onAccent : AppColors.muted,
         ),
         child: Text(
           '${i + 1}',

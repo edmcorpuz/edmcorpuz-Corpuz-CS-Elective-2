@@ -8,12 +8,14 @@ import '../state/shop_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/account_avatar.dart';
 import '../widgets/confirm_delete.dart';
+import '../widgets/facet_logo.dart';
 import '../widgets/filter_panel.dart';
 import '../widgets/filter_sidebar.dart';
 import '../widgets/pagination_bar.dart';
 import '../widgets/product_card.dart';
 import '../widgets/product_form.dart';
 import '../widgets/shop_hero.dart';
+import '../widgets/theme_toggle.dart';
 import 'cart_screen.dart';
 import 'categories_screen.dart';
 import 'orders_screen.dart';
@@ -67,7 +69,9 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(
         content: Text('${p.name} added to cart'),
-        action: SnackBarAction(label: 'VIEW CART', textColor: AppColors.accent, onPressed: () => _open(const CartScreen())),
+        // Action snackbars stay up by default; this one would cover Checkout.
+        persist: false,
+        action: SnackBarAction(label: 'VIEW CART', onPressed: () => _open(const CartScreen())),
       ));
   }
 
@@ -118,7 +122,10 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     }
   }
 
-  void _open(Widget screen) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
+  void _open(Widget screen) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
+  }
 
   Future<void> _signOut() async {
     final messenger = ScaffoldMessenger.of(context);
@@ -159,7 +166,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
               count: cartCount,
               isLabelVisible: cartCount > 0,
               backgroundColor: AppColors.accent,
-              textColor: Colors.black,
+              textColor: AppColors.onAccent,
               child: const Icon(Icons.shopping_bag_outlined),
             ),
           ),
@@ -179,9 +186,9 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                     style: monoLabel(size: 9.5, color: account.isAdmin ? AppColors.accent : AppColors.muted),
                   ),
                   const SizedBox(height: 4),
-                  Text(user.displayName, style: const TextStyle(color: AppColors.text, fontWeight: FontWeight.w600)),
+                  Text(user.displayName, style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w600)),
                   if (user.email != null && user.email != user.displayName)
-                    Text(user.email!, style: const TextStyle(color: AppColors.muted, fontSize: 12.5)),
+                    Text(user.email!, style: TextStyle(color: AppColors.muted, fontSize: 12.5)),
                 ],
               ),
             ),
@@ -226,7 +233,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 40, 16, 32),
               child: Text(
-                'FACET HOME APPLIANCES — CS ELECTIVE 2 · SUPABASE × FLUTTER',
+                'FACET HOME APPLIANCES · CS ELECTIVE 2 · SUPABASE × FLUTTER',
                 textAlign: TextAlign.center,
                 style: monoLabel(size: 10),
               ),
@@ -240,15 +247,10 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
       appBar: AppBar(
         toolbarHeight: 68,
         titleSpacing: 20,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('FACET', style: displayStyle(26).copyWith(letterSpacing: -0.5)),
-            const SizedBox(width: 6),
-            Container(width: 9, height: 9, decoration: const BoxDecoration(color: AppColors.accent, shape: BoxShape.circle)),
-          ],
-        ),
+        // Phones: the mark alone, so the wordmark doesn't collide with the actions.
+        title: FacetLogo(size: 28, showWordmark: width >= 520),
         actions: [
+          const ThemeToggle(),
           if (!wide)
             IconButton(
               tooltip: 'Filters',
@@ -312,14 +314,14 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
             child: SizedBox(
               height: 2,
               child: state.loading
-                  ? const LinearProgressIndicator(color: AppColors.accent, backgroundColor: AppColors.line)
-                  : const ColoredBox(color: AppColors.line),
+                  ? LinearProgressIndicator(color: AppColors.accent, backgroundColor: AppColors.line)
+                  : ColoredBox(color: AppColors.line),
             ),
           ),
           if (state.error != null && state.items.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 12),
-              child: Text(describeError(state.error!), style: const TextStyle(color: AppColors.danger)),
+              child: Text(describeError(state.error!), style: TextStyle(color: AppColors.danger)),
             ),
         ],
       ),
@@ -328,7 +330,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
 
   List<Widget> _body(ShopState state, {required bool isAdmin}) {
     if (!state.loadedOnce) {
-      return const [
+      return [
         SliverToBoxAdapter(
           child: SizedBox(height: 320, child: Center(child: CircularProgressIndicator(color: AppColors.accent))),
         ),
@@ -431,7 +433,7 @@ class _Message extends StatelessWidget {
           const SizedBox(height: 12),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 460),
-            child: Text(body, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted, height: 1.5)),
+            child: Text(body, textAlign: TextAlign.center, style: TextStyle(color: AppColors.muted, height: 1.5)),
           ),
           const SizedBox(height: 20),
           OutlinedButton(onPressed: onAction, child: Text(actionLabel)),

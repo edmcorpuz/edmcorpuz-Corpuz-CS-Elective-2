@@ -40,11 +40,11 @@ class CartScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.shopping_bag_outlined, size: 48, color: AppColors.muted),
+                    Icon(Icons.shopping_bag_outlined, size: 48, color: AppColors.muted),
                     const SizedBox(height: 16),
                     Text('Your cart is empty', style: displayStyle(26)),
                     const SizedBox(height: 8),
-                    const Text('Tap “Add to cart” on an appliance to start.', style: TextStyle(color: AppColors.muted)),
+                    Text('Tap “Add to cart” on an appliance to start.', style: TextStyle(color: AppColors.muted)),
                     const SizedBox(height: 20),
                     OutlinedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Back to the shop')),
                   ],
@@ -66,7 +66,7 @@ class CartScreen extends ConsumerWidget {
                     ),
                     Container(
                       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-                      decoration: const BoxDecoration(border: Border(top: BorderSide(color: AppColors.line))),
+                      decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.line))),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -79,15 +79,15 @@ class CartScreen extends ConsumerWidget {
                           ),
                           if (checkout.hasError) ...[
                             const SizedBox(height: 12),
-                            Text(describeError(checkout.error!), style: const TextStyle(color: AppColors.danger)),
+                            Text(describeError(checkout.error!), style: TextStyle(color: AppColors.danger)),
                           ],
                           const SizedBox(height: 16),
                           FilledButton(
                             onPressed: checkout.isLoading ? null : () => _checkout(context, ref),
                             child: checkout.isLoading
-                                ? const SizedBox.square(
+                                ? SizedBox.square(
                                     dimension: 18,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.onAccent),
                                   )
                                 : const Text('Checkout'),
                           ),
@@ -127,7 +127,7 @@ class _CartLine extends StatelessWidget {
             children: [
               Text(p.name, style: const TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 2),
-              Text('${formatPeso(p.price)} each', style: const TextStyle(color: AppColors.muted)),
+              Text('${formatPeso(p.price)} each', style: TextStyle(color: AppColors.muted)),
               if (atStock)
                 Text('Only ${p.stock} in stock', style: monoLabel(size: 9.5, color: AppColors.accent)),
             ],
@@ -155,7 +155,7 @@ class _CartLine extends StatelessWidget {
         IconButton(
           tooltip: 'Remove from cart',
           onPressed: () => bag.remove(p.id!),
-          icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.muted),
+          icon: Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.muted),
         ),
       ],
     );

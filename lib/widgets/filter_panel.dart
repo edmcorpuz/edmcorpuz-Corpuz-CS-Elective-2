@@ -72,7 +72,7 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
           textInputAction: TextInputAction.search,
           decoration: InputDecoration(
             hintText: 'Find an appliance…',
-            prefixIcon: const Icon(Icons.search_rounded, color: AppColors.muted),
+            prefixIcon: Icon(Icons.search_rounded, color: AppColors.muted),
             suffixIcon: _search.text.isEmpty
                 ? null
                 : IconButton(
@@ -135,7 +135,7 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
 
   List<Widget> _priceSection(ShopState state, ShopController controller) {
     final bounds = state.bounds;
-    if (bounds == null) return [_label('PRICE'), const Text('—')];
+    if (bounds == null) return [_label('PRICE'), const Text('Loading prices…')];
 
     final step = _stepFor(bounds.max - bounds.min);
     final min = (bounds.min / step).floorToDouble() * step;

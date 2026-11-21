@@ -26,12 +26,12 @@ class OrderConfirmationScreen extends StatelessWidget {
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(color: AppColors.accent.withValues(alpha: 0.15), shape: BoxShape.circle),
-                  child: const Icon(Icons.check_rounded, size: 40, color: AppColors.accent),
+                  child: Icon(Icons.check_rounded, size: 40, color: AppColors.accent),
                 ),
                 const SizedBox(height: 24),
                 Text('Order placed', style: displayStyle(40), textAlign: TextAlign.center),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Thanks! Your order is saved and the stock has been set aside for you.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AppColors.muted, height: 1.5),
@@ -68,7 +68,7 @@ class _Fact extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14),
-      decoration: const BoxDecoration(border: Border(top: BorderSide(color: AppColors.line))),
+      decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.line))),
       child: Row(
         children: [
           Text(label, style: monoLabel(size: 10)),

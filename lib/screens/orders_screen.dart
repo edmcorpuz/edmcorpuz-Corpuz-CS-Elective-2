@@ -37,7 +37,7 @@ class OrdersScreen extends ConsumerWidget {
               constraints: const BoxConstraints(maxWidth: 820),
               child: Column(
                 children: [
-                  if (isLoading) const LinearProgressIndicator(color: AppColors.accent, minHeight: 2),
+                  if (isLoading) LinearProgressIndicator(color: AppColors.accent, minHeight: 2),
                   Expanded(
                     child: ListView.separated(
                       padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
@@ -64,7 +64,7 @@ class OrdersScreen extends ConsumerWidget {
             action: isAdmin ? 'Refresh' : 'Back to the shop',
             onAction: isAdmin ? () => ref.read(ordersProvider.notifier).refresh() : () => Navigator.of(context).pop(),
           ),
-        _ => const Center(child: CircularProgressIndicator(color: AppColors.accent)),
+        _ => Center(child: CircularProgressIndicator(color: AppColors.accent)),
       },
     );
   }
@@ -140,7 +140,7 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
               '${o.itemCount} ${o.itemCount == 1 ? 'item' : 'items'}',
               if (widget.isAdmin) o.customerName ?? o.customerEmail ?? 'Unknown customer',
             ].join(' · '),
-            style: const TextStyle(color: AppColors.muted, fontSize: 13),
+            style: TextStyle(color: AppColors.muted, fontSize: 13),
           ),
           const SizedBox(height: 12),
           for (final item in o.items)
@@ -149,7 +149,7 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
               child: Row(
                 children: [
                   Expanded(child: Text('${item.quantity} × ${item.productName}')),
-                  Text('${formatPeso(item.unitPrice)} each', style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+                  Text('${formatPeso(item.unitPrice)} each', style: TextStyle(color: AppColors.muted, fontSize: 13)),
                   const SizedBox(width: 16),
                   SizedBox(
                     width: 90,
@@ -205,7 +205,7 @@ class _Message extends StatelessWidget {
             const SizedBox(height: 16),
             Text(title, style: displayStyle(26), textAlign: TextAlign.center),
             const SizedBox(height: 8),
-            Text(body, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted, height: 1.5)),
+            Text(body, textAlign: TextAlign.center, style: TextStyle(color: AppColors.muted, height: 1.5)),
             const SizedBox(height: 20),
             OutlinedButton(onPressed: onAction, child: Text(action)),
           ],

@@ -62,6 +62,8 @@ class _ApplianceViewState extends State<ApplianceView> with SingleTickerProvider
   double _yaw = 0;
   double _pitch = _restPitch;
   double _yawVelocity = 0;
+  /// Linear progress toward the hovered pose; [_hover] is it eased.
+  double _hoverProgress = 0;
   double _hover = 0;
   double _spin = 0;
   double _time = 0;
@@ -89,12 +91,16 @@ class _ApplianceViewState extends State<ApplianceView> with SingleTickerProvider
     _last = elapsed;
     _time += dt;
 
+    // Ease in and out over ~0.8 s so the hover reads as a smooth showroom
+    // turn instead of a snap.
     final target = _isActive ? 1.0 : 0.0;
-    final rate = _reduceMotion ? 20.0 : 3.2;
-    _hover += (target - _hover) * math.min(1, dt * rate);
-    if ((_hover - target).abs() < 0.001) _hover = target;
+    final step = dt * (_reduceMotion ? 20.0 : 1.25);
+    _hoverProgress = target > _hoverProgress
+        ? math.min(target, _hoverProgress + step)
+        : math.max(target, _hoverProgress - step);
+    _hover = Curves.easeInOutCubic.transform(_hoverProgress);
 
-    _spin += dt * (_reduceMotion ? 0 : (1.6 + 16 * _hover));
+    _spin += dt * (_reduceMotion ? 0 : (0.8 + 8 * _hover));
 
     if (!_dragging) {
       // Momentum from a drag, then settle back toward the front.
@@ -109,9 +115,9 @@ class _ApplianceViewState extends State<ApplianceView> with SingleTickerProvider
       final turns = ((_yaw - _showcaseYaw) / (2 * math.pi)).roundToDouble();
       final goal = _showcaseYaw + turns * 2 * math.pi + sway;
       if (_yawVelocity.abs() < 0.6) {
-        _yaw += (goal - _yaw) * math.min(1, dt * (_isActive ? 4.5 : 1.4));
+        _yaw += (goal - _yaw) * math.min(1, dt * (_isActive ? 2.4 : 1.0));
       }
-      _pitch += (_restPitch - _pitch) * math.min(1, dt * 1.6);
+      _pitch += (_restPitch - _pitch) * math.min(1, dt * 1.2);
     }
 
     _pose.update(

@@ -57,7 +57,7 @@ class _TiltCardState extends State<TiltCard> {
             onTap: widget.onTap,
             child: TweenAnimationBuilder<Offset>(
               tween: Tween(end: _target),
-              duration: const Duration(milliseconds: 220),
+              duration: const Duration(milliseconds: 420),
               curve: Curves.easeOutCubic,
               builder: (context, tilt, _) {
                 final transform = Matrix4.identity()
@@ -69,18 +69,18 @@ class _TiltCardState extends State<TiltCard> {
                   transform: transform,
                   child: AnimatedScale(
                     scale: _pressed ? 0.97 : (_hovered ? 1.02 : 1),
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
+                    duration: const Duration(milliseconds: 380),
+                    curve: Curves.easeInOutCubic,
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 220),
+                      duration: const Duration(milliseconds: 380),
                       decoration: BoxDecoration(
                         borderRadius: radius,
                         border: Border.all(
-                          color: _hovered ? const Color(0xFF3A3A45) : AppColors.line,
+                          color: _hovered ? Color.lerp(AppColors.line, AppColors.accent, 0.45)! : AppColors.line,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: _hovered ? 0.55 : 0.3),
+                            color: AppColors.shadow.withValues(alpha: (_hovered ? 0.5 : 0.26) * (AppColors.isDark ? 1 : 0.4)),
                             blurRadius: _hovered ? 40 : 18,
                             offset: Offset(-tilt.dx * 10, 18 - tilt.dy * 6),
                           ),
@@ -96,14 +96,14 @@ class _TiltCardState extends State<TiltCard> {
                               child: IgnorePointer(
                                 child: AnimatedOpacity(
                                   opacity: _hovered ? 1 : 0,
-                                  duration: const Duration(milliseconds: 220),
+                                  duration: const Duration(milliseconds: 380),
                                   child: DecoratedBox(
                                     decoration: BoxDecoration(
                                       gradient: RadialGradient(
                                         center: Alignment(tilt.dx, tilt.dy),
                                         radius: 1.1,
                                         colors: [
-                                          Colors.white.withValues(alpha: 0.10),
+                                          Colors.white.withValues(alpha: AppColors.isDark ? 0.08 : 0.4),
                                           Colors.white.withValues(alpha: 0.0),
                                         ],
                                       ),

@@ -25,7 +25,7 @@ class FilterSidebar extends ConsumerWidget {
       duration: _duration,
       curve: Curves.easeOutCubic,
       width: open ? openWidth : railWidth,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(right: BorderSide(color: AppColors.line)),
       ),
       child: ClipRect(

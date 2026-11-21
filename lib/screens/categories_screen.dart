@@ -41,12 +41,12 @@ class CategoriesScreen extends ConsumerWidget {
         label: const Text('Add category'),
       ),
       body: !state.loadedOnce
-          ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
+          ? Center(child: CircularProgressIndicator(color: AppColors.accent))
           : categories.isEmpty
               ? Center(
                   child: Text(
                     state.error != null ? describeError(state.error!) : 'No categories yet. Add the first one.',
-                    style: const TextStyle(color: AppColors.muted),
+                    style: TextStyle(color: AppColors.muted),
                   ),
                 )
               : Center(
@@ -76,7 +76,7 @@ class CategoriesScreen extends ConsumerWidget {
                               ),
                               IconButton(
                                 tooltip: 'Delete $name',
-                                icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger),
+                                icon: Icon(Icons.delete_outline_rounded, color: AppColors.danger),
                                 onPressed: () async {
                                   final ok = await confirmDelete(context, name, 'This removes the category. Categories that still have products can’t be deleted.');
                                   if (ok && context.mounted) {

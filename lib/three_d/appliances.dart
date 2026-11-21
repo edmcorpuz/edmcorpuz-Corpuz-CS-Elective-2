@@ -220,7 +220,7 @@ class Appliances {
       _cache.putIfAbsent((kind, detail), () => ApplianceModel(build(kind, detail)));
 
   static List<Part> build(ApplianceKind kind, MeshDetail detail) {
-    final s = detail == MeshDetail.high ? 28 : 14;
+    final s = detail == MeshDetail.high ? 40 : 22;
     Mesh m(void Function(MeshBuilder b) f) {
       final b = MeshBuilder(segments: s);
       f(b);

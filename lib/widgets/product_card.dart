@@ -28,7 +28,8 @@ class ProductCard extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
-  static const _duration = Duration(milliseconds: 320);
+  // Slow enough to read as a smooth showroom turn, not a snap.
+  static const _duration = Duration(milliseconds: 520);
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +66,7 @@ class ProductCard extends StatelessWidget {
                           tilt: tilt,
                           active: active,
                           phase: (product.id ?? 0) * 0.9,
-                          speed: 0.35,
+                          speed: 0.25,
                         ),
                       ),
                     ),
@@ -160,13 +161,13 @@ class ProductCard extends StatelessWidget {
                   AnimatedScale(
                     scale: active ? 1.12 : 1,
                     duration: _duration,
-                    curve: Curves.easeOutBack,
+                    curve: Curves.easeInOutCubic,
                     child: IconButton.filled(
                       tooltip: product.inStock ? 'Add to cart' : 'Sold out',
                       onPressed: product.inStock ? onAddToBag : null,
                       style: IconButton.styleFrom(
                         backgroundColor: active ? AppColors.accent : AppColors.text,
-                        foregroundColor: Colors.black,
+                        foregroundColor: active ? AppColors.onAccent : AppColors.bg,
                         disabledBackgroundColor: AppColors.line,
                       ),
                       icon: const Icon(Icons.add_rounded),
@@ -192,7 +193,7 @@ class _ActionTag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
+        color: AppColors.surface.withValues(alpha: 0.88),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
       ),
@@ -202,7 +203,7 @@ class _ActionTag extends StatelessWidget {
           Container(
             width: 6,
             height: 6,
-            decoration: const BoxDecoration(color: AppColors.accent, shape: BoxShape.circle),
+            decoration: BoxDecoration(color: AppColors.accent, shape: BoxShape.circle),
           ),
           const SizedBox(width: 6),
           Text(label.toUpperCase(), style: monoLabel(size: 9.5, color: AppColors.text)),

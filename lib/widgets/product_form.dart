@@ -316,7 +316,7 @@ class _ProductFormState extends ConsumerState<ProductForm> {
           ),
           if (_error != null) ...[
             const SizedBox(height: 16),
-            Text(_error!, style: const TextStyle(color: AppColors.danger)),
+            Text(_error!, style: TextStyle(color: AppColors.danger)),
           ],
         ],
       ),
@@ -327,13 +327,13 @@ class _ProductFormState extends ConsumerState<ProductForm> {
       children: [
         TextButton(
           onPressed: _saving ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel', style: TextStyle(color: AppColors.muted)),
+          child: Text('Cancel', style: TextStyle(color: AppColors.muted)),
         ),
         const SizedBox(width: 8),
         FilledButton(
           onPressed: _saving ? null : _save,
           child: _saving
-              ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+              ? SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.onAccent))
               : Text(_editing ? 'Save changes' : 'Add product'),
         ),
       ],
@@ -414,7 +414,7 @@ class _PhotoPlaceholder extends StatelessWidget {
   const _PhotoPlaceholder();
 
   @override
-  Widget build(BuildContext context) => const ColoredBox(
+  Widget build(BuildContext context) => ColoredBox(
         color: AppColors.surfaceHigh,
         child: Center(child: Icon(Icons.image_outlined, color: AppColors.muted)),
       );

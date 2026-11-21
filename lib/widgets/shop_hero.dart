@@ -32,9 +32,9 @@ class ShopHero extends StatelessWidget {
       children: [
         Row(
           children: [
-            Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.accent, shape: BoxShape.circle)),
+            Container(width: 8, height: 8, decoration: BoxDecoration(color: AppColors.accent, shape: BoxShape.circle)),
             const SizedBox(width: 10),
-            Flexible(child: Text('HOME APPLIANCES — RENDERED IN 3D', style: monoLabel(color: AppColors.text))),
+            Flexible(child: Text('HOME APPLIANCES, RENDERED IN 3D', style: monoLabel(color: AppColors.text))),
           ],
         ),
         const SizedBox(height: 18),
@@ -42,7 +42,7 @@ class ShopHero extends StatelessWidget {
         const SizedBox(height: 18),
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 440),
-          child: const Text(
+          child: Text(
             'Fridges, washers, fans and kitchen helpers, each one built in live 3D. '
             'Hover a product to see it work: doors open, drums spin, toast pops.',
             style: TextStyle(color: AppColors.muted, fontSize: 15, height: 1.5),
@@ -88,7 +88,7 @@ class ShopHero extends StatelessWidget {
           bottom: 8,
           child: Row(
             children: [
-              const Icon(Icons.pan_tool_alt_outlined, size: 14, color: AppColors.muted),
+              Icon(Icons.pan_tool_alt_outlined, size: 14, color: AppColors.muted),
               const SizedBox(width: 6),
               Text('HOVER · DRAG TO ROTATE', style: monoLabel(size: 10)),
             ],

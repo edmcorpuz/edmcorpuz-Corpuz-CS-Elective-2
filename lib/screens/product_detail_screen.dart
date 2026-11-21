@@ -92,7 +92,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           bottom: 22,
           child: Row(
             children: [
-              const Icon(Icons.threesixty_rounded, size: 16, color: AppColors.muted),
+              Icon(Icons.threesixty_rounded, size: 16, color: AppColors.muted),
               const SizedBox(width: 8),
               Text('HOVER OR DRAG · ${p.kind.label.toUpperCase()}', style: monoLabel(size: 10)),
             ],
@@ -105,7 +105,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             onPressed: () => setState(() => _demoOn = !_demoOn),
             style: FilledButton.styleFrom(
               backgroundColor: _demoOn ? AppColors.accent : AppColors.surfaceHigh,
-              foregroundColor: _demoOn ? Colors.black : AppColors.text,
+              foregroundColor: _demoOn ? AppColors.onAccent : AppColors.text,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
             icon: Icon(_demoOn ? Icons.stop_rounded : Icons.play_arrow_rounded, size: 18),
@@ -125,7 +125,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
         Text(formatPeso(p.price), style: displayStyle(28, color: AppColors.muted)),
         const SizedBox(height: 22),
         if (p.description.isNotEmpty)
-          Text(p.description, style: const TextStyle(color: AppColors.muted, fontSize: 15, height: 1.6)),
+          Text(p.description, style: TextStyle(color: AppColors.muted, fontSize: 15, height: 1.6)),
         const SizedBox(height: 26),
         _SpecRow(label: 'TYPE', value: p.kind.label),
         _SpecRow(
@@ -147,8 +147,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 semanticLabel: 'Photo of ${p.name}',
                 loadingBuilder: (_, child, progress) => progress == null
                     ? child
-                    : const ColoredBox(color: AppColors.surfaceHigh, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
-                errorBuilder: (_, _, _) => const ColoredBox(
+                    : ColoredBox(color: AppColors.surfaceHigh, child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
+                errorBuilder: (_, _, _) => ColoredBox(
                   color: AppColors.surfaceHigh,
                   child: Center(child: Text('Photo unavailable', style: TextStyle(color: AppColors.muted))),
                 ),
@@ -243,7 +243,7 @@ class _SpecRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(border: Border(top: BorderSide(color: AppColors.line))),
+      decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.line))),
       child: Row(
         children: [
           SizedBox(width: 110, child: Text(label, style: monoLabel(size: 10))),

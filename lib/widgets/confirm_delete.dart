@@ -12,7 +12,10 @@ Future<bool> confirmDelete(BuildContext context, String name, String body) async
       actions: [
         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
         FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: AppColors.danger, foregroundColor: Colors.black),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.danger,
+            foregroundColor: AppColors.isDark ? AppColors.bg : Colors.white,
+          ),
           onPressed: () => Navigator.pop(context, true),
           child: const Text('Delete'),
         ),

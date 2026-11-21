@@ -27,7 +27,7 @@ class AccountAvatar extends StatelessWidget {
         backgroundColor: AppColors.surfaceHigh,
         foregroundImage: photo == null ? null : NetworkImage(photo),
         onForegroundImageError: photo == null ? null : (_, _) {},
-        child: Text(initial, style: const TextStyle(color: AppColors.text, fontWeight: FontWeight.w700, fontSize: 13)),
+        child: Text(initial, style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w700, fontSize: 13)),
       ),
     );
   }

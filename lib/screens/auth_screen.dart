@@ -6,7 +6,9 @@ import '../state/account_controller.dart';
 import '../theme/app_theme.dart';
 import '../three_d/appliance_view.dart';
 import '../three_d/appliances.dart';
+import '../widgets/facet_logo.dart';
 import '../widgets/product_form.dart' show describeError;
+import '../widgets/theme_toggle.dart';
 
 /// Log in and sign up. Signed-out visitors see only this screen: the
 /// catalogue needs an account (and RLS gives signed-out users nothing).
@@ -108,7 +110,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: wide
+        child: Stack(
+          children: [
+            Positioned.fill(child: _body(wide, form)),
+            const Positioned(top: 8, right: 8, child: ThemeToggle()),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _body(bool wide, Widget form) {
+    return wide
             ? Row(
                 children: [
                   Expanded(child: _stage()),
@@ -124,9 +137,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [SizedBox(height: 220, child: _stage(compact: true)), form],
                 ),
-              ),
-      ),
-    );
+              );
   }
 
   Widget _stage({bool compact = false}) {
@@ -152,13 +163,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         Positioned(
           left: compact ? 4 : 40,
           top: compact ? 4 : 36,
-          child: Row(
-            children: [
-              Text('FACET', style: displayStyle(compact ? 22 : 28).copyWith(letterSpacing: -0.5)),
-              const SizedBox(width: 6),
-              Container(width: 9, height: 9, decoration: const BoxDecoration(color: AppColors.accent, shape: BoxShape.circle)),
-            ],
-          ),
+          child: FacetLogo(size: compact ? 26 : 32),
         ),
       ],
     );
@@ -172,24 +177,24 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(_signUp ? 'Create your account' : 'Welcome back', style: displayStyle(38)),
+            Text(_signUp ? 'Create your account' : 'Welcome to FACET', style: displayStyle(38)),
             const SizedBox(height: 10),
             Text(
               _signUp
                   ? 'Shop 3D appliances, keep a cart and track your orders.'
-                  : 'Log in to browse the catalogue, shop and see your orders.',
-              style: const TextStyle(color: AppColors.muted, height: 1.5),
+                  : 'Log in or create an account to shop our 3D appliance catalogue and track your orders.',
+              style: TextStyle(color: AppColors.muted, height: 1.5),
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: _busy ? null : _google,
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.text,
-                foregroundColor: Colors.black,
+                foregroundColor: AppColors.bg,
                 disabledBackgroundColor: AppColors.surfaceHigh,
               ),
               icon: _leavingForGoogle
-                  ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.muted))
+                  ? SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.muted))
                   : const _GoogleMark(),
               label: Text(_leavingForGoogle ? 'Opening Google…' : 'Continue with Google'),
             ),
@@ -262,11 +267,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             ],
             if (_error != null) ...[
               const SizedBox(height: 14),
-              Text(_error!, style: const TextStyle(color: AppColors.danger, height: 1.4)),
+              Text(_error!, style: TextStyle(color: AppColors.danger, height: 1.4)),
             ],
             if (_notice != null) ...[
               const SizedBox(height: 14),
-              Text(_notice!, style: const TextStyle(color: AppColors.accent, height: 1.4)),
+              Text(_notice!, style: TextStyle(color: AppColors.accent, height: 1.4)),
             ],
             const SizedBox(height: 20),
             OutlinedButton(
