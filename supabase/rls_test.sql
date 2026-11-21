@@ -44,7 +44,7 @@ begin
   select count(*) into n from public.products;
   results := results || format('customer reads products (%s): %s', n, case when n > 0 then 'ok' else 'FAIL' end);
   begin
-    insert into public.products (name, price, category) values ('Hack', 1, 'Kitchen');
+    insert into public.products (name, price, category_id) values ('Hack', 1, (select id from public.categories limit 1));
     results := results || text 'customer adds product: FAIL';
   exception when insufficient_privilege then
     results := results || text 'customer adds product: denied ok';
@@ -61,7 +61,7 @@ begin
   exception when insufficient_privilege then
     results := results || text 'customer makes self admin: denied ok';
   end;
-  update public.profiles set full_name = 'RLS Test' where id = cust_id;
+  update public.profiles set firstname = 'RLS', lastname = 'Test' where id = cust_id;
   get diagnostics n = row_count;
   results := results || format('customer renames own profile: %s', case when n = 1 then 'ok' else 'FAIL' end);
   select count(*) into n from public.profiles;

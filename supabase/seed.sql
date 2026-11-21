@@ -7,8 +7,8 @@ insert into public.categories (name) values
   ('Refrigeration'), ('Laundry'), ('Kitchen'), ('Cooling'), ('Entertainment'), ('Cleaning')
 on conflict (name) do nothing;
 
-insert into public.products (name, description, price, category, stock, model, color, created_at)
-select v.name, v.description, v.price, v.category, v.stock, v.model, v.color, now() - (v.age || ' hours')::interval
+insert into public.products (name, description, price, category_id, stock, model, color, created_at)
+select v.name, v.description, v.price, c.id, v.stock, v.model, v.color, now() - (v.age || ' hours')::interval
 from (values
   ('Frost Two-Door Refrigerator',  '9 cu. ft. inverter fridge with a top freezer, LED interior light and glass shelves.',          28995.00, 'Refrigeration', 6,  'fridge',       '#EDEDED',  1),
   ('Retro ''58 Refrigerator',      'Rounded retro styling in mint, 7 cu. ft., chrome handles and a quiet inverter compressor.',   45990.00, 'Refrigeration', 2,  'fridge',       '#A8E6CF',  2),
@@ -35,4 +35,5 @@ from (values
   ('Roam S1 Robot Vacuum',         'Gyro navigation, 120-minute runtime and app scheduling.',                                     9990.00, 'Cleaning',     13,  'robot_vacuum', '#F2F2F2', 23),
   ('Roam S2 Max Robot Vacuum',     'Lidar mapping, vacuum and mop in one, with auto-empty dock support.',                        19990.00, 'Cleaning',      6,  'robot_vacuum', '#4A4F5A', 24)
 ) as v(name, description, price, category, stock, model, color, age)
+join public.categories c on c.name = v.category
 where not exists (select 1 from public.products);

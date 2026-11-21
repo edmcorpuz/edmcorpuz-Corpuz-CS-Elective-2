@@ -44,10 +44,15 @@ class FakeAuth implements AuthRepository {
   }
 
   @override
-  Future<bool> signUp({required String email, required String password, required String fullName}) async {
+  Future<bool> signUp({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+  }) async {
     if (passwords.containsKey(email)) throw const AuthException('User already registered', statusCode: '422');
     passwords[email] = password;
-    _current = AccountUser(id: 'id-$email', email: email, name: fullName);
+    _current = AccountUser(id: 'id-$email', email: email, name: '$firstName $lastName');
     _changes.add(null);
     return true;
   }
@@ -141,7 +146,7 @@ void main() {
     });
 
     test('signing up creates a customer account and signs it in', () async {
-      final signedIn = await controller().signUp(email: 'new@test.dev', password: 'secret1', fullName: 'New Person');
+      final signedIn = await controller().signUp(email: 'new@test.dev', password: 'secret1', firstName: 'New', lastName: 'Person');
       await pumpEventQueue();
       expect(signedIn, isTrue);
       expect(read().user?.displayName, 'New Person');
@@ -150,7 +155,7 @@ void main() {
 
     test('signing up twice with one email explains what to do', () async {
       await expectLater(
-        controller().signUp(email: 'owner@test.dev', password: 'x12345', fullName: 'Dup'),
+        controller().signUp(email: 'owner@test.dev', password: 'x12345', firstName: 'Dup', lastName: 'User'),
         throwsA(isA<AuthException>()
             .having(describeError, 'message', 'That email already has an account. Log in instead.')),
       );
@@ -261,7 +266,7 @@ void main() {
         'order_items': [
           {'product_name': 'Pop 2-Slice Toaster', 'unit_price': 645, 'quantity': 2},
         ],
-        'profiles': {'email': 'juan@example.com', 'full_name': 'Juan Cruz'},
+        'profiles': {'email': 'juan@example.com', 'firstname': 'Juan', 'lastname': 'Cruz'},
       });
       expect(order.id, 42);
       expect(order.itemCount, 2);

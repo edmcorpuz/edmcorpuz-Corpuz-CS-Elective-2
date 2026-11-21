@@ -34,10 +34,17 @@ class SupabaseOrderRepository implements OrderRepository {
   Future<List<Order>> fetchOrders() async {
     final rows = await _client
         .from('orders')
-        .select('*, order_items(product_name, unit_price, quantity), profiles(email, full_name)')
+        .select('*, order_items(product_name, unit_price, quantity)')
         .order('created_at', ascending: false)
         .order('id', ascending: false);
-    return rows.map(Order.fromMap).toList();
+    // orders.user_id points at auth.users, so who placed each order comes from
+    // a second query on profiles (RLS: customers see only themselves).
+    final ids = {for (final r in rows) r['user_id'] as String}.toList();
+    final profiles = ids.isEmpty
+        ? const <Map<String, dynamic>>[]
+        : await _client.from('profiles').select('id, email, firstname, lastname').inFilter('id', ids);
+    final byId = {for (final p in profiles) p['id'] as String: p};
+    return [for (final r in rows) Order.fromMap({...r, 'profiles': byId[r['user_id']]})];
   }
 
   @override

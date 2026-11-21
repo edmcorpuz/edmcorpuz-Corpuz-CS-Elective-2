@@ -21,7 +21,8 @@ class AuthScreen extends ConsumerStatefulWidget {
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _name = TextEditingController();
+  final _firstName = TextEditingController();
+  final _lastName = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _confirm = TextEditingController();
@@ -34,7 +35,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   @override
   void dispose() {
-    for (final c in [_name, _email, _password, _confirm]) {
+    for (final c in [_firstName, _lastName, _email, _password, _confirm]) {
       c.dispose();
     }
     super.dispose();
@@ -75,7 +76,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     final account = ref.read(accountProvider.notifier);
     try {
       if (_signUp) {
-        final signedIn = await account.signUp(email: _email.text, password: _password.text, fullName: _name.text);
+        final signedIn = await account.signUp(
+          email: _email.text,
+          password: _password.text,
+          firstName: _firstName.text,
+          lastName: _lastName.text,
+        );
         if (!signedIn && mounted) {
           setState(() {
             _busy = false;
@@ -211,13 +217,31 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             ),
             const SizedBox(height: 20),
             if (_signUp) ...[
-              TextFormField(
-                controller: _name,
-                enabled: !_busy,
-                textInputAction: TextInputAction.next,
-                autofillHints: const [AutofillHints.name],
-                decoration: const InputDecoration(labelText: 'Full name'),
-                validator: (v) => (v ?? '').trim().isEmpty ? 'Enter your name' : null,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _firstName,
+                      enabled: !_busy,
+                      textInputAction: TextInputAction.next,
+                      autofillHints: const [AutofillHints.givenName],
+                      decoration: const InputDecoration(labelText: 'First name'),
+                      validator: (v) => (v ?? '').trim().isEmpty ? 'Enter your first name' : null,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _lastName,
+                      enabled: !_busy,
+                      textInputAction: TextInputAction.next,
+                      autofillHints: const [AutofillHints.familyName],
+                      decoration: const InputDecoration(labelText: 'Last name'),
+                      validator: (v) => (v ?? '').trim().isEmpty ? 'Enter your last name' : null,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
             ],

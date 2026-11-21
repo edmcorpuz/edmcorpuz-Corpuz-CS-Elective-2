@@ -39,7 +39,8 @@ class Product {
         name: map['name'] as String,
         description: (map['description'] as String?) ?? '',
         price: (map['price'] as num).toDouble(),
-        category: map['category'] as String,
+        // Joined from categories (products.category_id -> categories.id).
+        category: ((map['categories'] as Map?)?['name'] ?? map['category'] ?? '') as String,
         stock: (map['stock'] as num?)?.toInt() ?? 0,
         kind: ApplianceKind.fromDb(map['model'] as String?),
         colorHex: (map['color'] as String?) ?? '#F2F2F2',
@@ -49,12 +50,12 @@ class Product {
             : DateTime.tryParse(map['created_at'] as String),
       );
 
-  /// Columns sent on insert/update (id and created_at are set by Postgres).
+  /// Columns sent on insert/update (id and created_at are set by Postgres;
+  /// the repository adds category_id).
   Map<String, dynamic> toWriteMap() => {
         'name': name.trim(),
         'description': description.trim(),
         'price': price,
-        'category': category.trim(),
         'stock': stock,
         'model': kind.dbName,
         'color': colorHex.toUpperCase(),

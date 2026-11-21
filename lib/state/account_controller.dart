@@ -60,8 +60,13 @@ class AccountController extends Notifier<AccountState> {
   }
 
   /// Returns false when the new account must confirm its email first.
-  Future<bool> signUp({required String email, required String password, required String fullName}) async {
-    final signedIn = await _auth.signUp(email: email, password: password, fullName: fullName);
+  Future<bool> signUp({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+  }) async {
+    final signedIn = await _auth.signUp(email: email, password: password, firstName: firstName, lastName: lastName);
     if (signedIn) await _recheck();
     return signedIn;
   }

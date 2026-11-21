@@ -30,7 +30,7 @@ renderer written in pure Dart, plus an optional photo in Supabase Storage.
 
 Every new account starts as a customer: the `on_auth_user_created` trigger
 creates its `profiles` row with role `customer`. A profile's role can't be
-changed from the app (only `full_name` and `avatar_url` are granted for
+changed from the app (only `firstname` and `lastname` are granted for
 update), so making someone an admin happens in the SQL Editor.
 
 ### Admin
@@ -43,7 +43,7 @@ update), so making someone an admin happens in the SQL Editor.
 | Edit pre-fills every field | `ProductForm(initial: product)` |
 | Delete asks first, naming the product | [`confirmDelete`](lib/widgets/confirm_delete.dart) |
 | Validation: name required, price ≥ 0, stock a whole number ≥ 0 | Form validators, backed by `check` constraints in [`schema.sql`](supabase/schema.sql) |
-| Category management | [`CategoriesScreen`](lib/screens/categories_screen.dart): add, rename (products follow by `on update cascade`), delete (blocked while in use) |
+| Category management | [`CategoriesScreen`](lib/screens/categories_screen.dart): add, rename (products keep pointing at the same `category_id`), delete (blocked while products use it) |
 | Admin order list, update status | [`OrdersScreen`](lib/screens/orders_screen.dart) with a status dropdown → `orders.status` (the only column admins may update) |
 
 ### Customer
@@ -61,6 +61,10 @@ update), so making someone an admin happens in the SQL Editor.
 | Items keep a snapshot of name and price | `order_items.product_name` and `unit_price`; `product_id` is `on delete set null` |
 | Confirmation with order number and total | [`OrderConfirmationScreen`](lib/screens/order_confirmation_screen.dart) |
 | Order history: own orders, newest first, status, date, total, items | `OrdersScreen` for customers |
+
+### Database schema
+
+The tables follow the required schema diagram: `roles` (`id`, `role`, `created_at`, `encoded_by`), `profiles` (`id`, `created_at`, `email`, `firstname`, `lastname`, `role_id`), `categories`, `products` (`category_id`, `price` float4, `stock` int2, `image_url`), `orders` (`user_id` → `auth.users`) and `order_items`. Two columns are added on purpose: `order_items.product_name`, the name snapshot the manual requires, and `products.model` / `color`, which pick the 3D appliance and its finish. A database made by an earlier version is upgraded with [`supabase/migrate_to_required_schema.sql`](supabase/migrate_to_required_schema.sql).
 
 ### Row Level Security
 

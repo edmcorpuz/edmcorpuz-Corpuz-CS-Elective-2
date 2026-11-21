@@ -42,6 +42,7 @@ class Order {
 
   factory Order.fromMap(Map<String, dynamic> map) {
     final profile = map['profiles'] as Map<String, dynamic>?;
+    final name = [profile?['firstname'], profile?['lastname']].whereType<String>().join(' ').trim();
     return Order(
       id: (map['id'] as num).toInt(),
       status: map['status'] as String,
@@ -51,7 +52,7 @@ class Order {
         for (final i in (map['order_items'] as List?) ?? const []) OrderItem.fromMap(i as Map<String, dynamic>),
       ],
       customerEmail: profile?['email'] as String?,
-      customerName: profile?['full_name'] as String?,
+      customerName: name.isEmpty ? null : name,
     );
   }
 }

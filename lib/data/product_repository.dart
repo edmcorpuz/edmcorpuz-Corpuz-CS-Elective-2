@@ -57,6 +57,21 @@ class SupabaseProductRepository implements ProductRepository {
 
   static const table = 'products';
 
+  /// Products point at categories by id; the app works with category names,
+  /// so every read joins the name in and every write looks the id up.
+  static const _select = '*, categories!inner(name)';
+  final Map<String, int> _categoryIds = {};
+
+  Future<int> _categoryId(String name) async {
+    final cached = _categoryIds[name];
+    if (cached != null) return cached;
+    final row = await _client.from('categories').select('id').eq('name', name).single();
+    return _categoryIds[name] = (row['id'] as num).toInt();
+  }
+
+  Future<Map<String, dynamic>> _writeMap(Product p) async =>
+      {...p.toWriteMap(), 'category_id': await _categoryId(p.category)};
+
   /// Filtering, sorting and pagination all happen in Postgres:
   /// `.gte/.lte` for the price slider, `.range()` for the page window and
   /// `count(CountOption.exact)` for the total used by the page buttons.
@@ -66,11 +81,11 @@ class SupabaseProductRepository implements ProductRepository {
     required int page,
     required int pageSize,
   }) async {
-    var query = _client.from(table).select();
+    var query = _client.from(table).select(_select);
 
     final search = sanitizeSearch(filter.search);
     if (search.isNotEmpty) query = query.ilike('name', '%$search%');
-    if (filter.category != null) query = query.eq('category', filter.category!);
+    if (filter.category != null) query = query.eq('categories.name', filter.category!);
     if (filter.minPrice != null) query = query.gte('price', filter.minPrice!);
     if (filter.maxPrice != null) query = query.lte('price', filter.maxPrice!);
 
@@ -122,7 +137,10 @@ class SupabaseProductRepository implements ProductRepository {
 
   @override
   Future<List<String>> fetchCategories() async {
-    final rows = await _client.from('categories').select('name').order('name');
+    final rows = await _client.from('categories').select('id, name').order('name');
+    _categoryIds
+      ..clear()
+      ..addAll({for (final r in rows) r['name'] as String: (r['id'] as num).toInt()});
     return [for (final r in rows) r['name'] as String];
   }
 
@@ -130,8 +148,8 @@ class SupabaseProductRepository implements ProductRepository {
   Future<Product> create(Product product) async {
     final row = await _client
         .from(table)
-        .insert(product.toWriteMap())
-        .select()
+        .insert(await _writeMap(product))
+        .select(_select)
         .single();
     return Product.fromMap(row);
   }
@@ -140,9 +158,9 @@ class SupabaseProductRepository implements ProductRepository {
   Future<Product> update(Product product) async {
     final row = await _client
         .from(table)
-        .update(product.toWriteMap())
+        .update(await _writeMap(product))
         .eq('id', product.id!)
-        .select()
+        .select(_select)
         .single();
     return Product.fromMap(row);
   }

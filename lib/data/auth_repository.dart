@@ -47,7 +47,12 @@ abstract interface class AuthRepository {
 
   /// Creates a customer account. Returns false when Supabase wants the email
   /// confirmed before the first sign-in.
-  Future<bool> signUp({required String email, required String password, required String fullName});
+  Future<bool> signUp({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+  });
 
   /// Sends the browser (or the in-app browser on phones) to Google. The
   /// result arrives later through [changes].
@@ -100,11 +105,18 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<bool> signUp({required String email, required String password, required String fullName}) async {
+  Future<bool> signUp({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+  }) async {
+    final first = firstName.trim(), last = lastName.trim();
     final res = await _client.auth.signUp(
       email: email.trim(),
       password: password,
-      data: {'full_name': fullName.trim()},
+      // first_name / last_name fill profiles.firstname / lastname (sign-up trigger).
+      data: {'first_name': first, 'last_name': last, 'full_name': '$first $last'},
       emailRedirectTo: kIsWeb ? _webReturnUrl() : kMobileAuthRedirect,
     );
     return res.session != null;
@@ -129,7 +141,7 @@ class SupabaseAuthRepository implements AuthRepository {
   Future<bool> isAdmin() async {
     final id = _client.auth.currentUser?.id;
     if (id == null) return false;
-    final row = await _client.from('profiles').select('roles(name)').eq('id', id).maybeSingle();
-    return (row?['roles'] as Map?)?['name'] == 'admin';
+    final row = await _client.from('profiles').select('roles(role)').eq('id', id).maybeSingle();
+    return (row?['roles'] as Map?)?['role'] == 'admin';
   }
 }
